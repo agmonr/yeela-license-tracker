@@ -244,7 +244,8 @@ def build_report(latest_date, df, trend):
     </div>
 
     <footer>
-        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')} מתוך {len(trend)} תמונות ארכיון היסטוריות.
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')} מתוך {len(trend)} תמונות ארכיון היסטוריות.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
 </body>
