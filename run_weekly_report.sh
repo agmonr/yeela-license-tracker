@@ -4,3 +4,4 @@ cd "$PROJECT_DIR"
 source venv/bin/activate
 python3 ./weekly_report.py
 ./push_archive.sh
+./statics/generate_report.sh
