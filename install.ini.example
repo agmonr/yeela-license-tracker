@@ -1,0 +1,9 @@
+; Local deployment settings. Copy this file to install.ini and fill in
+; the real path:
+;     cp install.ini.example install.ini
+;
+; install.ini is gitignored - it holds the absolute path to this
+; checkout, which would otherwise leak the local username into files
+; committed to GitHub. install.sh creates it automatically.
+[project]
+dir = /home/user/yeela-license-tracker

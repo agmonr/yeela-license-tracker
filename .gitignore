@@ -1,6 +1,9 @@
 # sensitive configuration (real Sheet ID + personal emails)
 config.py
 
+# local deployment path (would leak the local username into git)
+install.ini
+
 # python
 __pycache__/
 *.pyc

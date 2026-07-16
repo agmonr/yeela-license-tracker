@@ -24,8 +24,12 @@ else
     echo "config.py already exists, leaving it as-is."
 fi
 
+echo "Writing install.ini with this checkout's path..."
+printf '[project]\ndir = %s\n' "$(pwd)" > install.ini
+
 if ! command -v sendmail >/dev/null 2>&1; then
     echo "Warning: sendmail not found. mailer.py requires /usr/sbin/sendmail to send email."
 fi
 
 echo "Done. Activate the environment with: source venv/bin/activate"
+echo "Run ./set_cron.sh to install/update the daily and weekly cron jobs."
