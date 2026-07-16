@@ -56,18 +56,30 @@ treat it as an alternate/legacy path, not the live one, unless a task says
 otherwise. Don't assume changes to `fetch_data.py`/`notify_changes.py` need
 mirroring there or vice versa without checking which is actually in use.
 
-The weekly flow (`run_weekly_report.sh`) runs `weekly_report.py` (diffs
-current `v1.csv` against whichever snapshot's mtime is closest to 7 days
-ago, since rotation isn't strictly daily, then emails `ADMIN_EMAILS` a
-summary + full detail table) followed by `push_archive.sh`.
+The weekly flow (`run_weekly_report.sh`) runs three steps in order:
 
-**`push_archive.sh`** copies each `archive/full_licenses_v*.csv` to a
-date-named sibling (`full_licenses_YYYY-MM-DD.csv`, derived from the file's
-mtime) and commits/pushes those to `main`. The `v*` files stay gitignored
-(they're the live rotation state the other scripts depend on); only the
-dated copies — which fall outside the `full_licenses_v*.csv` gitignore
-pattern — are meant to be tracked. The script is idempotent: unchanged
-content produces no commit.
+1. `weekly_report.py` diffs current `v1.csv` against whichever snapshot's
+   mtime is closest to 7 days ago (rotation isn't strictly daily), and
+   emails `ADMIN_EMAILS` a summary + full detail table.
+2. **`push_archive.sh`** copies each `archive/full_licenses_v*.csv` to a
+   date-named sibling (`full_licenses_YYYY-MM-DD.csv`, derived from the
+   file's mtime) and commits/pushes those to `main`. The `v*` files stay
+   gitignored (they're the live rotation state the other scripts depend
+   on); only the dated copies — which fall outside the
+   `full_licenses_v*.csv` gitignore pattern — are meant to be tracked.
+   Idempotent: unchanged content produces no commit.
+3. **`statics/generate_report.sh`** runs `statics/generate_dashboard.py`
+   and commits/pushes the result. It must run after `push_archive.sh`
+   since it depends on that week's dated snapshot already being written.
+   The Python script reads *only* the dated `archive/full_licenses_YYYY-MM-DD.csv`
+   files (not the gitignored `v*` ones, for reproducibility from the repo
+   alone), builds a self-contained HTML dashboard (summary cards +
+   matplotlib charts embedded as base64 PNGs: trend over time, top
+   species/cities for cutting, status breakdown) into
+   `statics/reports/report_<date>.html`, and updates
+   `statics/reports/index.html` and `statics/reports/trend_data.csv` (a
+   cache of per-date aggregates, extended incrementally so old snapshot
+   CSVs don't get re-read on every run). Also idempotent.
 
 ## Mail delivery
 
