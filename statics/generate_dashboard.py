@@ -820,6 +820,7 @@ def build_open_objections_report(latest_date, df):
             row.applicant,
             row.reason,
             "כיצד לכתוב התנגדות לרישיון הכריתה הזה",
+            "חפש ממקורות גלויים התנגדויות דומות והשלם בהתאם",
         ]
         clean_terms = [str(t).strip() for t in terms if pd.notna(t) and str(t).strip()]
         query = quote_plus(" ".join(clean_terms))
