@@ -37,6 +37,10 @@ SPECIES_COL = "מין העץ"
 STATUS_COL = "סטטוס רישיון"
 CANCELED_STATUS = "בוטל בעקבות השגה"
 DENIED_STATUS = "בקשה נדחתה"
+OPEN_STATUS = "מושהה ופתוח להגשת השגה"
+DEADLINE_COL = "תאריך אחרון להגשת השגה"
+APPLICANT_COL = "מבקש"
+LICENSE_COL = "מספר רישיון"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -316,7 +320,7 @@ def build_report(latest_date, df, trend):
     <header>
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -453,7 +457,7 @@ def build_city_report(latest_date, df):
     <header>
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -619,7 +623,7 @@ def build_objections_report(latest_date, df):
     <header>
         <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -714,6 +718,198 @@ window.addEventListener('resize', updateStickyOffsets);
 """
 
 
+def build_open_objections_report(latest_date, df):
+    """Live actionable list: every license currently open for a new
+    objection to be filed (OPEN_STATUS), sorted by nearest deadline first.
+    Unlike the other reports (retrospective statistics), this one exists to
+    drive real-time action - so days-left is computed against latest_date
+    (the snapshot's own date), not wall-clock "today", keeping the report
+    reproducible on rebuild."""
+    open_df = df[df[STATUS_COL] == OPEN_STATUS].copy()
+    open_df["_deadline_dt"] = pd.to_datetime(open_df[DEADLINE_COL], format="%d/%m/%Y", errors="coerce")
+    ref_date = pd.to_datetime(latest_date)
+    open_df["_days_left"] = (open_df["_deadline_dt"] - ref_date).dt.days
+    open_df = open_df.sort_values("_days_left", ascending=True, na_position="last")
+
+    def format_days_left(days):
+        if pd.isna(days):
+            return "—"
+        days = int(days)
+        if days < 0:
+            return "עבר המועד"
+        if days == 0:
+            return "היום האחרון"
+        return f"{days:,}"
+
+    def iso_or_sentinel(dt):
+        return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
+
+    rows = "".join(
+        f"<tr><td>{esc(row[CITY_COL])}</td>"
+        f"<td>{esc(row[SPECIES_COL])}</td>"
+        f"<td>{int(row[CUT_COL]):,}</td>"
+        f"<td>{esc(row[APPLICANT_COL])}</td>"
+        f"<td data-sort=\"{iso_or_sentinel(row['_deadline_dt'])}\">{esc(row[DEADLINE_COL])}</td>"
+        f"<td>{format_days_left(row['_days_left'])}</td>"
+        f"<td>{int(row[LICENSE_COL]):,}</td></tr>"
+        for _, row in open_df.iterrows()
+    )
+
+    n_open = len(open_df)
+    n_cities = open_df[CITY_COL].nunique()
+    n_trees = int(open_df[CUT_COL].sum())
+
+    return f"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דוח רישיונות פתוחים להגשת השגה ({latest_date})</title>
+<style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
+    .container {{ max-width: 1100px; margin: 0 auto; }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
+    header a {{ color: #ecf0f1; }}
+    h1 {{ margin: 0; font-size: 24px; }}
+    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
+    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
+    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
+    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
+    .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e67e22; }}
+    .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
+    .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
+    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
+    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
+    .export-btn:hover {{ background: #2980b9; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
+    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
+    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
+    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
+    tr:hover {{ background-color: #fcfcfc; }}
+    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .toolbar {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        header {{ position: static; box-shadow: none; }}
+        .panel {{ box-shadow: none; }}
+        thead th {{ position: static; box-shadow: none; }}
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>רישיונות פתוחים להגשת השגה</h1>
+        <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
+    </header>
+
+    <div class="panel explain">
+        <h2>מה מציג הדוח</h2>
+        <p>בניגוד לשאר הדוחות באתר, זהו דוח פעולה בזמן אמת: הוא מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
+    </div>
+
+    <div class="cards">
+        <div class="card"><div class="card-val">{n_open:,}</div><div class="card-lbl">רישיונות פתוחים להשגה</div></div>
+        <div class="card"><div class="card-val">{n_cities:,}</div><div class="card-lbl">יישובים</div></div>
+        <div class="card"><div class="card-val">{n_trees:,}</div><div class="card-lbl">עצים לכריתה בסיכון</div></div>
+    </div>
+
+    <div class="panel">
+        <div class="toolbar">
+            <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, מין עץ או מבקש..." oninput="filterCities()">
+            <span id="cityCount"></span>
+            <div class="toolbar-actions">
+                <button class="export-btn" onclick="downloadCSV('cityTable', 'open_for_objection_{latest_date}.csv')">הורדה כ-CSV</button>
+                <button class="export-btn" onclick="downloadExcel('cityTable', 'open_for_objection_{latest_date}.xls')">הורדה כ-Excel</button>
+            </div>
+        </div>
+        <table id="cityTable" data-sort-col="5" data-sort-dir="asc">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
+                    <th data-col="1" onclick="sortCities(1, 'string')">מין העץ</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">עצים לכריתה</th>
+                    <th data-col="3" onclick="sortCities(3, 'string')">מבקש</th>
+                    <th data-col="4" onclick="sortCities(4, 'string')">מועד אחרון להשגה</th>
+                    <th data-col="5" class="sort-asc" onclick="sortCities(5, 'number')">ימים שנותרו</th>
+                    <th data-col="6" onclick="sortCities(6, 'number')">מספר רישיון</th>
+                </tr>
+            </thead>
+            <tbody id="cityBody">{rows}</tbody>
+        </table>
+    </div>
+
+    <footer>
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
+</div>
+<script>
+{EXPORT_SCRIPT}
+function sortCities(col, type) {{
+    const table = document.getElementById('cityTable');
+    const tbody = document.getElementById('cityBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dir = (table.dataset.sortCol == col && table.dataset.sortDir === 'asc') ? 'desc' : 'asc';
+
+    const getVal = (tr) => {{
+        const td = tr.children[col];
+        return td.dataset.sort !== undefined ? td.dataset.sort : td.textContent.trim();
+    }};
+
+    rows.sort((a, b) => {{
+        let va = getVal(a);
+        let vb = getVal(b);
+        if (type === 'number') {{
+            va = parseFloat(String(va).replace(/,/g, '')) || 0;
+            vb = parseFloat(String(vb).replace(/,/g, '')) || 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        }}
+        return dir === 'asc' ? String(va).localeCompare(String(vb), 'he') : String(vb).localeCompare(String(va), 'he');
+    }});
+    rows.forEach(r => tbody.appendChild(r));
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    document.querySelectorAll('#cityTable th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    document.querySelector(`#cityTable th[data-col="${{col}}"]`).classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+}}
+
+function filterCities() {{
+    const q = document.getElementById('citySearch').value.trim();
+    const rows = document.querySelectorAll('#cityBody tr');
+    let shown = 0;
+    rows.forEach(r => {{
+        const match = [0, 1, 3].some(i => r.children[i].textContent.includes(q));
+        r.style.display = match ? '' : 'none';
+        if (match) shown++;
+    }});
+    document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} רישיונות`;
+}}
+filterCities();
+
+function updateStickyOffsets() {{
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
+</script>
+</body>
+</html>
+"""
+
+
 def build_index(trend):
     rows = "".join(
         f'<li><a href="report_{date_str}.html">{date_str}</a></li>'
@@ -739,6 +935,7 @@ def build_index(trend):
     <p><a href="current.html">הדוח האחרון</a></p>
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
     <p><a href="objections.html">דוח אפקטיביות השגות/התנגדויות לפי יישוב</a></p>
+    <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
 </div>
@@ -748,7 +945,7 @@ def build_index(trend):
 
 
 def build_ai_index(snapshots):
-    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html", f"{BASE_URL}objections.html"]
+    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html", f"{BASE_URL}objections.html", f"{BASE_URL}open_for_objection.html"]
     lines += [f"{BASE_URL}report_{date_str}.html" for date_str in sorted(snapshots)]
     return "\n".join(lines) + "\n"
 
@@ -810,6 +1007,10 @@ def main():
     objections_report_path = REPORTS_DIR / "objections.html"
     objections_report_path.write_text(build_objections_report(latest_date, latest_df), encoding="utf-8")
     print(f"Objections report written to {objections_report_path}")
+
+    open_objections_report_path = REPORTS_DIR / "open_for_objection.html"
+    open_objections_report_path.write_text(build_open_objections_report(latest_date, latest_df), encoding="utf-8")
+    print(f"Open-for-objection report written to {open_objections_report_path}")
 
     ai_index_path = REPORTS_DIR / "llms.txt"
     ai_index_path.write_text(build_ai_index(snapshots), encoding="utf-8")
