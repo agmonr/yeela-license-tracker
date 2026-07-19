@@ -225,6 +225,20 @@ def esc(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def build_nav_links(latest_date):
+    """Identical, identically-ordered cross-links for every report page's
+    header, including a (harmless) link to the current page itself - so
+    the nav looks the same everywhere instead of each page hand-omitting
+    itself in a different order."""
+    return (
+        f'<a href="report_{latest_date}.html">הדוח המלא</a> &middot; '
+        f'<a href="objections.html">דו"ח היענות הרשות</a> &middot; '
+        f'<a href="by_city.html">דוח לפי יישוב</a> &middot; '
+        f'<a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; '
+        f'<a href="index.html">כל הדוחות</a>'
+    )
+
+
 def table_rows(pairs):
     return "".join(f"<tr><td>{esc(a)}</td><td>{b:,}</td></tr>" for a, b in pairs)
 
@@ -321,7 +335,7 @@ def build_report(latest_date, df, trend):
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -459,7 +473,7 @@ def build_city_report(latest_date, df):
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -626,7 +640,7 @@ def build_objections_report(latest_date, df):
         <h1>דו"ח היענות הרשות</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -841,7 +855,7 @@ def build_open_objections_report(latest_date, df):
         <h1>רישיונות פתוחים להגשת השגה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -967,8 +981,8 @@ def build_index(trend):
     <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
     <p>האתר בהרצה, עלולות להיות טעויות</p>
     <p><a href="current.html">הדוח האחרון</a></p>
-    <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
     <p><a href="objections.html">דו"ח היענות הרשות</a></p>
+    <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
     <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
