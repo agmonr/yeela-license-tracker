@@ -1,5 +1,6 @@
 https://agmonr.github.io/yeela-license-tracker/statics/reports/index.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/by_city.html
+https://agmonr.github.io/yeela-license-tracker/statics/reports/objections.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-06-28.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-06-29.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-06-30.html

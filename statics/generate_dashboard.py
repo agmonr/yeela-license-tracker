@@ -36,6 +36,7 @@ CITY_COL = "ישוב"
 SPECIES_COL = "מין העץ"
 STATUS_COL = "סטטוס רישיון"
 CANCELED_STATUS = "בוטל בעקבות השגה"
+DENIED_STATUS = "בקשה נדחתה"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -250,7 +251,7 @@ def build_report(latest_date, df, trend):
     <header>
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
     </header>
 
     <div class="cards">
@@ -374,7 +375,7 @@ def build_city_report(latest_date, df):
     <header>
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
     </header>
 
     <div class="panel">
@@ -392,6 +393,143 @@ def build_city_report(latest_date, df):
                     <th data-col="4" onclick="sortCities(4, 'number')">יחס כריתה/העתקה</th>
                     <th data-col="5" onclick="sortCities(5, 'number')">לשימור</th>
                     <th data-col="6" onclick="sortCities(6, 'number')">מיני עצים</th>
+                </tr>
+            </thead>
+            <tbody id="cityBody">{rows}</tbody>
+        </table>
+    </div>
+
+    <footer>
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
+</div>
+<script>
+function sortCities(col, type) {{
+    const table = document.getElementById('cityTable');
+    const tbody = document.getElementById('cityBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dir = (table.dataset.sortCol == col && table.dataset.sortDir === 'asc') ? 'desc' : 'asc';
+
+    rows.sort((a, b) => {{
+        let va = a.children[col].textContent.trim();
+        let vb = b.children[col].textContent.trim();
+        if (type === 'number') {{
+            va = parseFloat(va.replace(/,/g, '')) || 0;
+            vb = parseFloat(vb.replace(/,/g, '')) || 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        }}
+        return dir === 'asc' ? va.localeCompare(vb, 'he') : vb.localeCompare(va, 'he');
+    }});
+    rows.forEach(r => tbody.appendChild(r));
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    document.querySelectorAll('#cityTable th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    document.querySelector(`#cityTable th[data-col="${{col}}"]`).classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+}}
+
+function filterCities() {{
+    const q = document.getElementById('citySearch').value.trim();
+    const rows = document.querySelectorAll('#cityBody tr');
+    let shown = 0;
+    rows.forEach(r => {{
+        const match = r.children[0].textContent.includes(q);
+        r.style.display = match ? '' : 'none';
+        if (match) shown++;
+    }});
+    document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} ישובים`;
+}}
+filterCities();
+
+function updateStickyOffsets() {{
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
+</script>
+</body>
+</html>
+"""
+
+
+def build_objections_report(latest_date, df):
+    """Effectiveness of התנגדות (objection) per city: licenses that ended up
+    cancelled following an objection (CANCELED_STATUS) or with the original
+    request denied (DENIED_STATUS), against that city's total license count.
+    Only cities with at least one such license are listed, sorted by that
+    combined count (the "successful" objection outcomes) descending."""
+    city_stats = (
+        df.groupby(CITY_COL)
+        .agg(
+            licenses=(CITY_COL, "size"),
+            canceled=(STATUS_COL, lambda s: int((s == CANCELED_STATUS).sum())),
+            denied=(STATUS_COL, lambda s: int((s == DENIED_STATUS).sum())),
+        )
+    )
+    city_stats["rejected"] = city_stats["canceled"] + city_stats["denied"]
+    city_stats = city_stats[city_stats["rejected"] > 0].sort_values("rejected", ascending=False)
+
+    rows = "".join(
+        f"<tr><td>{esc(city)}</td>"
+        f"<td>{int(row.rejected):,}</td>"
+        f"<td>{int(row.canceled):,}</td>"
+        f"<td>{int(row.denied):,}</td>"
+        f"<td>{int(row.licenses):,}</td></tr>"
+        for city, row in city_stats.iterrows()
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דוח אפקטיביות השגות/התנגדויות - רישיונות כריתה ({latest_date})</title>
+<style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
+    .container {{ max-width: 900px; margin: 0 auto; }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
+    header a {{ color: #ecf0f1; }}
+    h1 {{ margin: 0; font-size: 24px; }}
+    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
+    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
+    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
+    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
+    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
+    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
+    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
+    tr:hover {{ background-color: #fcfcfc; }}
+    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
+        <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+    </header>
+
+    <div class="panel">
+        <p class="note">מציג יישובים שבהם לפחות רישיון אחד בוטל בעקבות השגה או שהבקשה נדחתה. מיון ברירת מחדל: מספר הרישיונות שנדחו/בוטלו.</p>
+        <div class="toolbar">
+            <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
+            <span id="cityCount"></span>
+        </div>
+        <table id="cityTable" data-sort-col="1" data-sort-dir="desc">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
+                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">סה"כ נדחו/בוטלו</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">בוטל בעקבות השגה</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">בקשה נדחתה</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">סה"כ רישיונות ביישוב</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
@@ -477,6 +615,7 @@ def build_index(trend):
     <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
     <p><a href="current.html">הדוח האחרון</a></p>
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
+    <p><a href="objections.html">דוח אפקטיביות השגות/התנגדויות לפי יישוב</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
 </div>
@@ -486,7 +625,7 @@ def build_index(trend):
 
 
 def build_ai_index(snapshots):
-    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html"]
+    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html", f"{BASE_URL}objections.html"]
     lines += [f"{BASE_URL}report_{date_str}.html" for date_str in sorted(snapshots)]
     return "\n".join(lines) + "\n"
 
@@ -544,6 +683,10 @@ def main():
     city_report_path = REPORTS_DIR / "by_city.html"
     city_report_path.write_text(build_city_report(latest_date, latest_df), encoding="utf-8")
     print(f"City report written to {city_report_path}")
+
+    objections_report_path = REPORTS_DIR / "objections.html"
+    objections_report_path.write_text(build_objections_report(latest_date, latest_df), encoding="utf-8")
+    print(f"Objections report written to {objections_report_path}")
 
     ai_index_path = REPORTS_DIR / "llms.txt"
     ai_index_path.write_text(build_ai_index(snapshots), encoding="utf-8")

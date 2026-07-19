@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דוח אפקטיביות השגות/התנגדויות - רישיונות כריתה (2026-07-19)</title>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }
+    header a { color: #ecf0f1; }
+    h1 { margin: 0; font-size: 24px; }
+    .subtitle { margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }
+    .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }
+    .note { color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    #citySearch { padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }
+    #cityCount { color: #7f8c8d; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }
+    th { background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th { position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }
+    th.sort-asc::after { content: " \25B2"; font-size: 10px; }
+    th.sort-desc::after { content: " \25BC"; font-size: 10px; }
+    tr:hover { background-color: #fcfcfc; }
+    footer { text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
+        <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p>נתונים נכון לתאריך 2026-07-19 &middot; <a href="report_2026-07-19.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+    </header>
+
+    <div class="panel">
+        <p class="note">מציג יישובים שבהם לפחות רישיון אחד בוטל בעקבות השגה או שהבקשה נדחתה. מיון ברירת מחדל: מספר הרישיונות שנדחו/בוטלו.</p>
+        <div class="toolbar">
+            <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
+            <span id="cityCount"></span>
+        </div>
+        <table id="cityTable" data-sort-col="1" data-sort-dir="desc">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
+                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">סה"כ נדחו/בוטלו</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">בוטל בעקבות השגה</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">בקשה נדחתה</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">סה"כ רישיונות ביישוב</th>
+                </tr>
+            </thead>
+            <tbody id="cityBody"><tr><td>ירושלים</td><td>151</td><td>81</td><td>70</td><td>3,363</td></tr><tr><td>נתניה</td><td>100</td><td>94</td><td>6</td><td>385</td></tr><tr><td>חיפה</td><td>88</td><td>24</td><td>64</td><td>1,659</td></tr><tr><td>הוד השרון</td><td>73</td><td>71</td><td>2</td><td>489</td></tr><tr><td>אשקלון</td><td>60</td><td>60</td><td>0</td><td>247</td></tr><tr><td>רחובות</td><td>42</td><td>36</td><td>6</td><td>799</td></tr><tr><td>חולון</td><td>33</td><td>27</td><td>6</td><td>394</td></tr><tr><td>רמת השרון</td><td>32</td><td>0</td><td>32</td><td>525</td></tr><tr><td>תל אביב -יפו</td><td>29</td><td>0</td><td>29</td><td>409</td></tr><tr><td>רמת גן</td><td>28</td><td>4</td><td>24</td><td>1,370</td></tr><tr><td>ברור חיל</td><td>27</td><td>24</td><td>3</td><td>57</td></tr><tr><td>הרצלייה</td><td>24</td><td>0</td><td>24</td><td>1,121</td></tr><tr><td>מבוא ביתר</td><td>24</td><td>24</td><td>0</td><td>24</td></tr><tr><td>בת ים</td><td>22</td><td>0</td><td>22</td><td>241</td></tr><tr><td>פתח תקווה</td><td>22</td><td>14</td><td>8</td><td>990</td></tr><tr><td>מודיעין-מכבים-רעות*</td><td>16</td><td>0</td><td>16</td><td>125</td></tr><tr><td>קריית אונו</td><td>14</td><td>0</td><td>14</td><td>122</td></tr><tr><td>חדרה</td><td>13</td><td>0</td><td>13</td><td>280</td></tr><tr><td>אשדוד</td><td>12</td><td>0</td><td>12</td><td>398</td></tr><tr><td>לוד</td><td>12</td><td>10</td><td>2</td><td>243</td></tr><tr><td>אלון הגליל</td><td>11</td><td>11</td><td>0</td><td>11</td></tr><tr><td>ראשון לציון</td><td>10</td><td>0</td><td>10</td><td>790</td></tr><tr><td>גבעתיים</td><td>9</td><td>0</td><td>9</td><td>244</td></tr><tr><td>צפת</td><td>9</td><td>0</td><td>9</td><td>71</td></tr><tr><td>נס ציונה</td><td>9</td><td>0</td><td>9</td><td>298</td></tr><tr><td>נהרייה</td><td>9</td><td>7</td><td>2</td><td>120</td></tr><tr><td>מגדל העמק</td><td>8</td><td>7</td><td>1</td><td>33</td></tr><tr><td>זכרון יעקב</td><td>8</td><td>0</td><td>8</td><td>164</td></tr><tr><td>כפר רוזנואלד (זרעית)</td><td>8</td><td>0</td><td>8</td><td>20</td></tr><tr><td>פרדס חנה-כרכור</td><td>8</td><td>0</td><td>8</td><td>410</td></tr><tr><td>קורנית</td><td>7</td><td>0</td><td>7</td><td>35</td></tr><tr><td>רעננה</td><td>7</td><td>0</td><td>7</td><td>641</td></tr><tr><td>קריית ביאליק</td><td>6</td><td>0</td><td>6</td><td>120</td></tr><tr><td>בת חן</td><td>6</td><td>6</td><td>0</td><td>11</td></tr><tr><td>ניר יצחק</td><td>5</td><td>0</td><td>5</td><td>12</td></tr><tr><td>כפר טרומן</td><td>5</td><td>0</td><td>5</td><td>14</td></tr><tr><td>עומר</td><td>5</td><td>0</td><td>5</td><td>101</td></tr><tr><td>מעיין צבי</td><td>5</td><td>0</td><td>5</td><td>21</td></tr><tr><td>כפר ורדים</td><td>5</td><td>0</td><td>5</td><td>18</td></tr><tr><td>יבנה</td><td>5</td><td>0</td><td>5</td><td>101</td></tr><tr><td>כפר סבא</td><td>5</td><td>0</td><td>5</td><td>404</td></tr><tr><td>נען</td><td>5</td><td>0</td><td>5</td><td>28</td></tr><tr><td>אמציה</td><td>5</td><td>0</td><td>5</td><td>8</td></tr><tr><td>באר יעקב</td><td>4</td><td>0</td><td>4</td><td>88</td></tr><tr><td>קדימה-צורן</td><td>4</td><td>0</td><td>4</td><td>70</td></tr><tr><td>כוכב יאיר</td><td>4</td><td>0</td><td>4</td><td>46</td></tr><tr><td>מבשרת ציון</td><td>4</td><td>0</td><td>4</td><td>23</td></tr><tr><td>בית קמה</td><td>4</td><td>0</td><td>4</td><td>9</td></tr><tr><td>יד מרדכי</td><td>3</td><td>0</td><td>3</td><td>21</td></tr><tr><td>קריית טבעון</td><td>3</td><td>0</td><td>3</td><td>129</td></tr><tr><td>פורייה - כפר עבודה</td><td>3</td><td>0</td><td>3</td><td>3</td></tr><tr><td>כפר בן נון</td><td>3</td><td>0</td><td>3</td><td>16</td></tr><tr><td>להבים</td><td>3</td><td>0</td><td>3</td><td>11</td></tr><tr><td>לוטם</td><td>3</td><td>0</td><td>3</td><td>22</td></tr><tr><td>בני ברק</td><td>3</td><td>0</td><td>3</td><td>63</td></tr><tr><td>עפולה</td><td>3</td><td>0</td><td>3</td><td>16</td></tr><tr><td>אור עקיבא</td><td>3</td><td>0</td><td>3</td><td>9</td></tr><tr><td>טירת כרמל</td><td>3</td><td>0</td><td>3</td><td>29</td></tr><tr><td>ערד</td><td>3</td><td>0</td><td>3</td><td>24</td></tr><tr><td>גן יבנה</td><td>3</td><td>0</td><td>3</td><td>74</td></tr><tr><td>משהד</td><td>3</td><td>0</td><td>3</td><td>17</td></tr><tr><td>ראש העין</td><td>3</td><td>0</td><td>3</td><td>42</td></tr><tr><td>דיר אל-אסד</td><td>3</td><td>0</td><td>3</td><td>30</td></tr><tr><td>בצרה</td><td>3</td><td>0</td><td>3</td><td>30</td></tr><tr><td>סעד</td><td>3</td><td>0</td><td>3</td><td>14</td></tr><tr><td>מרכז אזורי מרום הגליל</td><td>3</td><td>0</td><td>3</td><td>17</td></tr><tr><td>לכיש</td><td>2</td><td>0</td><td>2</td><td>31</td></tr><tr><td>נירים</td><td>2</td><td>0</td><td>2</td><td>35</td></tr><tr><td>כרמייה</td><td>2</td><td>0</td><td>2</td><td>33</td></tr><tr><td>שמרת</td><td>2</td><td>0</td><td>2</td><td>53</td></tr><tr><td>עתלית</td><td>2</td><td>0</td><td>2</td><td>46</td></tr><tr><td>נחל עוז</td><td>2</td><td>0</td><td>2</td><td>26</td></tr><tr><td>נוף הגליל</td><td>2</td><td>0</td><td>2</td><td>58</td></tr><tr><td>סח'נין</td><td>2</td><td>0</td><td>2</td><td>24</td></tr><tr><td>עין דור</td><td>2</td><td>0</td><td>2</td><td>2</td></tr><tr><td>אור הנר</td><td>2</td><td>0</td><td>2</td><td>13</td></tr><tr><td>מגאר</td><td>2</td><td>0</td><td>2</td><td>23</td></tr><tr><td>ערערה</td><td>2</td><td>0</td><td>2</td><td>5</td></tr><tr><td>אזור</td><td>2</td><td>0</td><td>2</td><td>21</td></tr><tr><td>שובה</td><td>2</td><td>0</td><td>2</td><td>12</td></tr><tr><td>מיתר</td><td>2</td><td>0</td><td>2</td><td>6</td></tr><tr><td>אור יהודה</td><td>2</td><td>0</td><td>2</td><td>53</td></tr><tr><td>באר שבע</td><td>2</td><td>0</td><td>2</td><td>182</td></tr><tr><td>משמר הנגב</td><td>2</td><td>0</td><td>2</td><td>3</td></tr><tr><td>אילון</td><td>2</td><td>0</td><td>2</td><td>3</td></tr><tr><td>כפר סאלד</td><td>2</td><td>0</td><td>2</td><td>8</td></tr><tr><td>כפר יונה</td><td>2</td><td>0</td><td>2</td><td>52</td></tr><tr><td>כמון</td><td>2</td><td>0</td><td>2</td><td>2</td></tr><tr><td>בסמת טבעון</td><td>2</td><td>0</td><td>2</td><td>12</td></tr><tr><td>קריית גת</td><td>2</td><td>0</td><td>2</td><td>57</td></tr><tr><td>ריינה</td><td>2</td><td>0</td><td>2</td><td>27</td></tr><tr><td>קריית אתא</td><td>2</td><td>0</td><td>2</td><td>15</td></tr><tr><td>ג'דיידה-מכר</td><td>2</td><td>0</td><td>2</td><td>3</td></tr><tr><td>יהוד</td><td>2</td><td>0</td><td>2</td><td>255</td></tr><tr><td>יקנעם עילית</td><td>2</td><td>0</td><td>2</td><td>92</td></tr><tr><td>ירוחם</td><td>2</td><td>0</td><td>2</td><td>6</td></tr><tr><td>חבצלת השרון</td><td>2</td><td>0</td><td>2</td><td>30</td></tr><tr><td>כאבול</td><td>2</td><td>0</td><td>2</td><td>25</td></tr><tr><td>ג'ש (גוש חלב)</td><td>2</td><td>0</td><td>2</td><td>15</td></tr><tr><td>כנרת (קבוצה)</td><td>2</td><td>0</td><td>2</td><td>3</td></tr><tr><td>גבים</td><td>2</td><td>0</td><td>2</td><td>63</td></tr><tr><td>גבעת שמואל</td><td>2</td><td>0</td><td>2</td><td>32</td></tr><tr><td>כפר החורש</td><td>2</td><td>0</td><td>2</td><td>30</td></tr><tr><td>קריית שמונה</td><td>2</td><td>0</td><td>2</td><td>27</td></tr><tr><td>כפר הס</td><td>2</td><td>0</td><td>2</td><td>9</td></tr><tr><td>קריית יערים</td><td>2</td><td>0</td><td>2</td><td>14</td></tr><tr><td>עופר</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>נתיבות</td><td>1</td><td>0</td><td>1</td><td>9</td></tr><tr><td>נתיב העשרה</td><td>1</td><td>0</td><td>1</td><td>8</td></tr><tr><td>קריית מלאכי</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>שער העמקים</td><td>1</td><td>0</td><td>1</td><td>27</td></tr><tr><td>רהט</td><td>1</td><td>0</td><td>1</td><td>13</td></tr><tr><td>קריית מוצקין</td><td>1</td><td>0</td><td>1</td><td>76</td></tr><tr><td>תובל</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>עראבה</td><td>1</td><td>0</td><td>1</td><td>41</td></tr><tr><td>קריית ים</td><td>1</td><td>0</td><td>1</td><td>75</td></tr><tr><td>עכו</td><td>1</td><td>0</td><td>1</td><td>54</td></tr><tr><td>רמלה</td><td>1</td><td>0</td><td>1</td><td>119</td></tr><tr><td>נצרת</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>רכסים</td><td>1</td><td>0</td><td>1</td><td>39</td></tr><tr><td>קיסריה</td><td>1</td><td>0</td><td>1</td><td>63</td></tr><tr><td>שואבה</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>רמות</td><td>1</td><td>0</td><td>1</td><td>8</td></tr><tr><td>צרעה</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>שדה נחום</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>פרוד</td><td>1</td><td>0</td><td>1</td><td>27</td></tr><tr><td>שדה בוקר</td><td>1</td><td>0</td><td>1</td><td>29</td></tr><tr><td>רמות נפתלי</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>צפרירים</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>רביבים</td><td>1</td><td>0</td><td>1</td><td>8</td></tr><tr><td>אביגדור</td><td>1</td><td>0</td><td>1</td><td>9</td></tr><tr><td>נצר סרני</td><td>1</td><td>0</td><td>1</td><td>6</td></tr><tr><td>ניר דוד (תל עמל)</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>טבריה</td><td>1</td><td>0</td><td>1</td><td>54</td></tr><tr><td>חלוץ</td><td>1</td><td>0</td><td>1</td><td>9</td></tr><tr><td>חורשים</td><td>1</td><td>0</td><td>1</td><td>6</td></tr><tr><td>חוקוק</td><td>1</td><td>0</td><td>1</td><td>7</td></tr><tr><td>האון</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>דבירה</td><td>1</td><td>0</td><td>1</td><td>13</td></tr><tr><td>דאלית אל-כרמל</td><td>1</td><td>0</td><td>1</td><td>13</td></tr><tr><td>גן השומרון</td><td>1</td><td>0</td><td>1</td><td>16</td></tr><tr><td>גדרה</td><td>1</td><td>0</td><td>1</td><td>39</td></tr><tr><td>גבעת ברנר</td><td>1</td><td>0</td><td>1</td><td>39</td></tr><tr><td>בני עי"ש</td><td>1</td><td>0</td><td>1</td><td>34</td></tr><tr><td>בן שמן (מושב)</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>בית ניר</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>בית ינאי</td><td>1</td><td>0</td><td>1</td><td>11</td></tr><tr><td>בחן</td><td>1</td><td>0</td><td>1</td><td>26</td></tr><tr><td>בארי</td><td>1</td><td>0</td><td>1</td><td>167</td></tr><tr><td>באקה אל-גרביה</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>ארז</td><td>1</td><td>0</td><td>1</td><td>28</td></tr><tr><td>אלעד</td><td>1</td><td>0</td><td>1</td><td>42</td></tr><tr><td>אלישמע</td><td>1</td><td>0</td><td>1</td><td>15</td></tr><tr><td>אילת</td><td>1</td><td>0</td><td>1</td><td>48</td></tr><tr><td>אורטל</td><td>1</td><td>0</td><td>1</td><td>14</td></tr><tr><td>אופקים</td><td>1</td><td>0</td><td>1</td><td>79</td></tr><tr><td>אום אל-פחם</td><td>1</td><td>0</td><td>1</td><td>44</td></tr><tr><td>אבן יהודה</td><td>1</td><td>0</td><td>1</td><td>45</td></tr><tr><td>טורעאן</td><td>1</td><td>0</td><td>1</td><td>17</td></tr><tr><td>טללים</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>טמרה</td><td>1</td><td>0</td><td>1</td><td>52</td></tr><tr><td>מגדל</td><td>1</td><td>0</td><td>1</td><td>15</td></tr><tr><td>נחשונים</td><td>1</td><td>0</td><td>1</td><td>4</td></tr><tr><td>נחף</td><td>1</td><td>0</td><td>1</td><td>30</td></tr><tr><td>נוף איילון</td><td>1</td><td>0</td><td>1</td><td>9</td></tr><tr><td>נגבה</td><td>1</td><td>0</td><td>1</td><td>24</td></tr><tr><td>נאות חובב</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>מרכז אזורי משגב</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>מפלסים</td><td>1</td><td>0</td><td>1</td><td>52</td></tr><tr><td>מעש</td><td>1</td><td>0</td><td>1</td><td>29</td></tr><tr><td>מעברות</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>מסעדה</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>מסדה</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>להבות חביבה</td><td>1</td><td>0</td><td>1</td><td>3</td></tr><tr><td>טמרה (יזרעאל)</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>להבות הבשן</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>אביעזר</td><td>1</td><td>0</td><td>1</td><td>27</td></tr><tr><td>כפר רות</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>כפר קרע</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>כפר סירקין</td><td>1</td><td>0</td><td>1</td><td>30</td></tr><tr><td>כפר מנחם</td><td>1</td><td>0</td><td>1</td><td>18</td></tr><tr><td>כפר הנשיא</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>כפר המכבי</td><td>1</td><td>0</td><td>1</td><td>2</td></tr><tr><td>כסרא-סמיע</td><td>1</td><td>0</td><td>1</td><td>19</td></tr><tr><td>כאוכב אבו אל-היג'א</td><td>1</td><td>0</td><td>1</td><td>5</td></tr><tr><td>ירכא</td><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>לבון</td><td>1</td><td>0</td><td>1</td><td>4</td></tr></tbody>
+        </table>
+    </div>
+
+    <footer>
+        נוצר אוטומטית ב-19/07/2026 15:38.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
+</div>
+<script>
+function sortCities(col, type) {
+    const table = document.getElementById('cityTable');
+    const tbody = document.getElementById('cityBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dir = (table.dataset.sortCol == col && table.dataset.sortDir === 'asc') ? 'desc' : 'asc';
+
+    rows.sort((a, b) => {
+        let va = a.children[col].textContent.trim();
+        let vb = b.children[col].textContent.trim();
+        if (type === 'number') {
+            va = parseFloat(va.replace(/,/g, '')) || 0;
+            vb = parseFloat(vb.replace(/,/g, '')) || 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        }
+        return dir === 'asc' ? va.localeCompare(vb, 'he') : vb.localeCompare(va, 'he');
+    });
+    rows.forEach(r => tbody.appendChild(r));
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    document.querySelectorAll('#cityTable th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    document.querySelector(`#cityTable th[data-col="${col}"]`).classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+}
+
+function filterCities() {
+    const q = document.getElementById('citySearch').value.trim();
+    const rows = document.querySelectorAll('#cityBody tr');
+    let shown = 0;
+    rows.forEach(r => {
+        const match = r.children[0].textContent.includes(q);
+        r.style.display = match ? '' : 'none';
+        if (match) shown++;
+    });
+    document.getElementById('cityCount').textContent = `מציג ${shown} מתוך ${rows.length} ישובים`;
+}
+filterCities();
+
+function updateStickyOffsets() {
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
+</script>
+</body>
+</html>
