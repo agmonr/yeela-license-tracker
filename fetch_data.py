@@ -13,16 +13,21 @@ CACHE_DB_PATH = os.path.join(CACHE_DIR, "yeela_license_details.db")
 LICENSE_COL = "מספר רישיון"
 REQUEST_REASON_COL = "סיבת בקשה"
 
-# The portal's own JSON API behind the Excel export - discovered by
-# inspecting its network traffic. Needs no real auth (confirmed the ALB
-# cookie it sets on first page load is sufficient even via plain HTTP
-# outside the browser), and its grid response includes fields the Excel
-# export doesn't (request reason, exact block/parcel, timestamps). Only
-# used here to backfill request-reason for the still-open licenses (a few
-# hundred rows), not to replace the Excel export as the source of the main
-# CSV - that keeps every existing downstream column/format unchanged.
+# The portal's own JSON API behind its UI - discovered by inspecting its
+# network traffic. Needs no real auth (confirmed the ALB cookie it sets on
+# first page load is sufficient even via plain HTTP outside the browser).
 GRID_API_URL = "https://yeela-trees.moag.gov.il/api/Fo/FOServiceRequest/getFOGridPublicityLicenses"
 OPEN_STATUS_CODE = 3  # "מושהה ופתוח להגשת השגה", per GetMultiLookupValues table 601
+
+# Same endpoint the "יצוא תוצאות לאקסל" button calls - verified
+# byte-for-byte identical to the UI-triggered download (same 28,454 rows,
+# same 17 columns), including the exact pageDetails/parameters body a real
+# UI click sends (pageSize is ignored server-side; the export always
+# returns the full filtered result set). Calling it directly skips the
+# UI's expand-panel-then-click-button flow entirely, so there's no
+# .form-expand/text-locator to break if the portal's frontend changes.
+EXPORT_API_URL = "https://yeela-trees.moag.gov.il/api/Fo/FOServiceRequest/exportRecordsToExcel"
+EXPORT_BODY = {"orderDetails": None, "pageDetails": {"pageNumber": 1, "pageSize": 20}, "parameters": {"appealLastDate": None}}
 
 
 def get_cache_connection():
@@ -126,22 +131,22 @@ async def download_full_list():
 
         print("Connecting to portal...")
         try:
-            await page.goto("https://yeela-trees.moag.gov.il/FoPublic/FoLicence", wait_until="domcontentloaded")
+            await page.goto("https://yeela-trees.moag.gov.il/FoPublic/FoLicence", wait_until="networkidle")
 
-            # Expand search panel to ensure export button is ready
-            expand_btn = page.locator(".form-expand").first
-            await expand_btn.wait_for(state="visible", timeout=60000)
-            await expand_btn.click()
-            await asyncio.sleep(3)
-
-            print("Triggering Excel export...")
-            async with page.expect_download(timeout=120000) as download_info:
-                await page.get_by_text("יצוא תוצאות לאקסל").click()
+            print("Fetching Excel export directly via API...")
+            resp = await page.request.post(
+                EXPORT_API_URL,
+                data=json.dumps(EXPORT_BODY),
+                headers={"Content-Type": "application/json", "Accept": "application/json", "userorgroleid": ""},
+            )
+            if resp.status != 200:
+                raise RuntimeError(f"Export API returned HTTP {resp.status}")
+            content = await resp.body()
 
             os.makedirs(ARCHIVE_DIR, exist_ok=True)
-            download = await download_info.value
             temp_xls = os.path.join(ARCHIVE_DIR, "temp_full.xlsx")
-            await download.save_as(temp_xls)
+            with open(temp_xls, "wb") as f:
+                f.write(content)
 
             print("Converting to CSV...")
             df = pd.read_excel(temp_xls)

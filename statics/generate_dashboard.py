@@ -447,6 +447,7 @@ def build_city_report(latest_date, df):
     .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
     #cityCount {{ color: #7f8c8d; font-size: 13px; }}
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
@@ -614,6 +615,7 @@ def build_objections_report(latest_date, df):
     .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
     #cityCount {{ color: #7f8c8d; font-size: 13px; }}
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
@@ -840,6 +842,11 @@ def build_open_objections_report(latest_date, df):
         for license_id, row in licenses.iterrows()
     )
 
+    city_options = "".join(
+        f'<option value="{esc(city)}">{esc(city)}</option>'
+        for city in sorted(licenses["city"].dropna().unique(), key=str)
+    )
+
     n_open = len(licenses)
     n_cities = licenses["city"].nunique()
     n_trees = int(licenses["trees_to_cut"].sum())
@@ -866,6 +873,7 @@ def build_open_objections_report(latest_date, df):
     .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
     #cityCount {{ color: #7f8c8d; font-size: 13px; }}
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
@@ -919,6 +927,10 @@ def build_open_objections_report(latest_date, df):
     <div class="panel">
         <div class="toolbar">
             <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
+            <select id="cityFilter" onchange="filterCities()">
+                <option value="">כל היישובים</option>
+                {city_options}
+            </select>
             <span id="cityCount"></span>
             <div class="toolbar-actions">
                 <button class="export-btn" onclick="downloadCSV('cityTable', 'open_for_objection_{latest_date}.csv')">הורדה כ-CSV</button>
@@ -981,10 +993,13 @@ function sortCities(col, type) {{
 
 function filterCities() {{
     const q = document.getElementById('citySearch').value.trim();
+    const cityFilter = document.getElementById('cityFilter').value;
     const rows = document.querySelectorAll('#cityBody tr');
     let shown = 0;
     rows.forEach(r => {{
-        const match = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
+        const matchesText = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
+        const matchesCity = !cityFilter || r.children[0].textContent.trim() === cityFilter;
+        const match = matchesText && matchesCity;
         r.style.display = match ? '' : 'none';
         if (match) shown++;
     }});
