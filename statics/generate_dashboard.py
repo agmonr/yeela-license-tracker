@@ -803,17 +803,28 @@ def build_open_objections_report(latest_date, df):
     def iso_or_sentinel(dt):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
-    def license_link(license_id):
-        query = quote_plus(f"יעל\"ה רישיון כריתה {int(license_id)}")
-        url = f"https://www.google.com/search?q={query}"
-        return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
-
     def maps_link(street, city):
         street = str(street).strip() if pd.notna(street) else ""
         address = f"{street}, {city}" if street else city
         query = quote_plus(f"{address}, ישראל")
         url = f"https://www.google.com/maps/search/?api=1&query={query}"
         return f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
+
+    def objection_help_link(license_id, row):
+        street = str(row.street).strip() if pd.notna(row.street) else ""
+        terms = [
+            f"רישיון כריתה מספר {int(license_id)}",
+            row.city,
+            street,
+            row.species,
+            row.applicant,
+            row.reason,
+            "כיצד לכתוב התנגדות לרישיון הכריתה הזה",
+        ]
+        clean_terms = [str(t).strip() for t in terms if pd.notna(t) and str(t).strip()]
+        query = quote_plus(" ".join(clean_terms))
+        url = f"https://www.google.com/search?q={query}"
+        return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
 
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
@@ -824,7 +835,7 @@ def build_open_objections_report(latest_date, df):
         f"<td>{esc(row.applicant)}</td>"
         f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
         f"<td>{format_days_left(row.days_left)}</td>"
-        f"<td>{license_link(license_id)}</td></tr>"
+        f"<td>{objection_help_link(license_id, row)}</td></tr>"
         for license_id, row in licenses.iterrows()
     )
 
