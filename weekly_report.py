@@ -127,7 +127,7 @@ def send_weekly_report(diff_df):
 <body>
     <div class="container">
         <h2>דוח שבועי - רישיונות כריתה</h2>
-        <p><a href="https://agmonr.github.io/yeela-license-tracker/statics/reports/objections.html">דוח אפקטיביות השגות/התנגדויות לפי יישוב</a>
+        <p><a href="https://agmonr.github.io/yeela-license-tracker/statics/reports/objections.html">דו"ח היענות הרשות</a>
         &middot; <a href="https://agmonr.github.io/yeela-license-tracker/statics/reports/open_for_objection.html">רישיונות פתוחים כרגע להגשת השגה</a></p>
         {body_note}
         {summary_html}

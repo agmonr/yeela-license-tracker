@@ -320,6 +320,7 @@ def build_report(latest_date, df, trend):
     <header>
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
@@ -457,6 +458,7 @@ def build_city_report(latest_date, df):
     <header>
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
@@ -580,7 +582,7 @@ def build_objections_report(latest_date, df):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>דוח אפקטיביות השגות/התנגדויות - עצים שניצלו ({latest_date})</title>
+<title>דו"ח היענות הרשות - עצים שניצלו ({latest_date})</title>
 <style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
     .container {{ max-width: 900px; margin: 0 auto; }}
@@ -621,8 +623,9 @@ def build_objections_report(latest_date, df):
 <body>
 <div class="container">
     <header>
-        <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
+        <h1>דו"ח היענות הרשות</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
@@ -837,6 +840,7 @@ def build_open_objections_report(latest_date, df):
     <header>
         <h1>רישיונות פתוחים להגשת השגה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
@@ -844,6 +848,7 @@ def build_open_objections_report(latest_date, df):
     <div class="panel explain">
         <h2>מה מציג הדוח</h2>
         <p>בניגוד לשאר הדוחות באתר, זהו דוח פעולה בזמן אמת: הוא מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
+        <p>לתשומת לב: הנתונים הגולמיים של מערכת יעל"ה אינם כוללים שדה שמציין אם כבר הוגשה השגה על רישיון מסוים. הסטטוס היחיד הרלוונטי הוא סטטוס הרישיון עצמו - וכל הרישיונות בדוח זה נמצאים בסטטוס "{OPEN_STATUS}" בדיוק משום שטרם הוגשה עליהם השגה שהמערכת כבר עיבדה (ברגע שהשגה מתקבלת לטיפול, הרישיון עובר לסטטוס "בתהליך בחינת השגות שהוגשו" ויוצא מהדוח הזה). כלומר, מבחינת הנתונים הרשמיים - כל רישיון המופיע כאן עדיין ללא השגה שטופלה. אם השגה כבר הוגשה על ידי מישהו אך טרם עובדה במערכת, אין כרגע דרך לדעת זאת מתוך הנתונים הגלויים לציבור.</p>
     </div>
 
     <div class="cards">
@@ -960,9 +965,10 @@ def build_index(trend):
 <body>
 <div class="container">
     <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
+    <p>האתר בהרצה, עלולות להיות טעויות</p>
     <p><a href="current.html">הדוח האחרון</a></p>
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
-    <p><a href="objections.html">דוח אפקטיביות השגות/התנגדויות לפי יישוב</a></p>
+    <p><a href="objections.html">דו"ח היענות הרשות</a></p>
     <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
