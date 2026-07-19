@@ -40,6 +40,64 @@ DENIED_STATUS = "בקשה נדחתה"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
+# Shared client-side export logic for sortable/filterable city tables.
+# Operates on currently visible (filtered) rows, in current DOM (sorted)
+# order, so exports match whatever the user has on screen. downloadExcel
+# writes SpreadsheetML 2003 XML (a native .xls Excel understands directly,
+# no ZIP/OOXML involved) rather than embedding a JS library, keeping every
+# report page dependency-free and self-contained.
+EXPORT_SCRIPT = """
+function tableVisibleRows(tableId) {
+    const table = document.getElementById(tableId);
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    const rows = Array.from(table.querySelectorAll('tbody tr'))
+        .filter(tr => tr.style.display !== 'none')
+        .map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+    return {headers, rows};
+}
+
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function downloadCSV(tableId, filename) {
+    const {headers, rows} = tableVisibleRows(tableId);
+    const escCsv = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const lines = [headers, ...rows].map(r => r.map(escCsv).join(','));
+    const blob = new Blob(['\\ufeff' + lines.join('\\r\\n')], {type: 'text/csv;charset=utf-8;'});
+    triggerDownload(blob, filename);
+}
+
+function downloadExcel(tableId, filename) {
+    const {headers, rows} = tableVisibleRows(tableId);
+    const escXml = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cell = v => `<Cell><Data ss:Type="String">${escXml(v)}</Data></Cell>`;
+    const row = cells => `<Row>${cells.map(cell).join('')}</Row>`;
+    const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="Sheet1">
+  <Table>
+   ${row(headers)}
+   ${rows.map(row).join('')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+    const blob = new Blob([xml], {type: 'application/vnd.ms-excel;charset=utf-8;'});
+    triggerDownload(blob, filename);
+}
+"""
+
 # (key, label, lookback in days; None = full history). Selectable as tabs
 # on the trend panel. Early on, snapshots don't span a year yet, so the
 # longer tabs just show everything available until more weeks accumulate.
@@ -368,6 +426,9 @@ def build_city_report(latest_date, df):
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
     #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
+    .export-btn:hover {{ background: #2980b9; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
@@ -400,6 +461,10 @@ def build_city_report(latest_date, df):
         <div class="toolbar">
             <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
             <span id="cityCount"></span>
+            <div class="toolbar-actions">
+                <button class="export-btn" onclick="downloadCSV('cityTable', 'by_city_{latest_date}.csv')">הורדה כ-CSV</button>
+                <button class="export-btn" onclick="downloadExcel('cityTable', 'by_city_{latest_date}.xls')">הורדה כ-Excel</button>
+            </div>
         </div>
         <table id="cityTable">
             <thead>
@@ -423,6 +488,7 @@ def build_city_report(latest_date, df):
     </footer>
 </div>
 <script>
+{EXPORT_SCRIPT}
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
     const tbody = document.getElementById('cityBody');
@@ -526,6 +592,9 @@ def build_objections_report(latest_date, df):
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
     #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
+    .export-btn:hover {{ background: #2980b9; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
@@ -569,6 +638,10 @@ def build_objections_report(latest_date, df):
         <div class="toolbar">
             <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
             <span id="cityCount"></span>
+            <div class="toolbar-actions">
+                <button class="export-btn" onclick="downloadCSV('cityTable', 'objections_{latest_date}.csv')">הורדה כ-CSV</button>
+                <button class="export-btn" onclick="downloadExcel('cityTable', 'objections_{latest_date}.xls')">הורדה כ-Excel</button>
+            </div>
         </div>
         <table id="cityTable" data-sort-col="4" data-sort-dir="desc">
             <thead>
@@ -591,6 +664,7 @@ def build_objections_report(latest_date, df):
     </footer>
 </div>
 <script>
+{EXPORT_SCRIPT}
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
     const tbody = document.getElementById('cityBody');
