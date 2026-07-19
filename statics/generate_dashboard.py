@@ -1217,8 +1217,8 @@ def build_approvers_report(latest_date, df):
                     <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">עצים שטופלו</th>
                     <th data-col="2" onclick="sortCities(2, 'number')">מספר רישיונות</th>
                     <th data-col="3" onclick="sortCities(3, 'number')">מספר יישובים</th>
-                    <th data-col="4" onclick="sortCities(4, 'number')">עצים שהוהפכו</th>
-                    <th data-col="5" onclick="sortCities(5, 'number')">% שהוהפכו</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">עצים לגביהם התקבלו השגות</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">% שהתקבלו</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
