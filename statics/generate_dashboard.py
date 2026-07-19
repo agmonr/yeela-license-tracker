@@ -815,14 +815,15 @@ def build_open_objections_report(latest_date, df):
     def objection_help_link(license_id, row):
         street = str(row.street).strip() if pd.notna(row.street) else ""
         terms = [
+            "כיצד לכתוב התנגדות לרישיון הכריתה הזה",
+            "חפש ממקורות גלויים התנגדויות דומות והשלם בהתאם",
             f"רישיון כריתה מספר {int(license_id)}",
             row.city,
             street,
             row.species,
             row.applicant,
             row.reason,
-            "כיצד לכתוב התנגדות לרישיון הכריתה הזה",
-            "חפש ממקורות גלויים התנגדויות דומות והשלם בהתאם",
+            "אתה פעיל סביבתי מנוסה, כתוב מפורט ככול האפשר",
         ]
         clean_terms = [str(t).strip() for t in terms if pd.notna(t) and str(t).strip()]
         query = quote_plus(" ".join(clean_terms))
