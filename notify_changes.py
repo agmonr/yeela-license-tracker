@@ -8,6 +8,16 @@ from sheet_subscribers import get_subscribers
 from mailer import send_html_mail
 
 DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
+REPORT_RE = re.compile(r"report_(\d{4}-\d{2}-\d{2})\.html$")
+REPORTS_BASE_URL = "https://agmonr.github.io/yeela-license-tracker/statics/reports/"
+
+def get_latest_report_url():
+    """Latest published weekly report URL, or None if none exist yet."""
+    dates = [m.group(1) for path in glob.glob("statics/reports/report_*.html")
+             if (m := REPORT_RE.search(path))]
+    if not dates:
+        return None
+    return f"{REPORTS_BASE_URL}report_{max(dates)}.html"
 
 def get_dated_snapshots():
     """Returns (date_str, path) for each archive/full_licenses_<date>.csv, sorted ascending."""
@@ -70,19 +80,30 @@ def send_notifications(diff_df):
 
     print(f"Found {len(diff_df)} total row changes. Checking against {len(subscribers)} subscriber(s)...")
 
+    report_url = get_latest_report_url()
+    report_link_html = (
+        f'<p><a href="{report_url}">קישור לדוח הכריתות השבועי</a></p>' if report_url else ""
+    )
+
+    # Resolve matches upfront so the inter-send sleep only runs *between*
+    # actual sends, never after the last one (or when nothing matches).
+    to_send = []
     for email, city_raw in subscribers:
         city_key = city_raw.replace("'", "").replace('"', "")
-
         city_diff = diff_df[diff_df['ישוב'].str.contains(city_key, na=False)]
-
         if not city_diff.empty:
-            print(f"-> Sending {len(city_diff)} changes to {email} for {city_key}")
+            to_send.append((email, city_key, city_diff))
+        else:
+            print(f"-> No relevant changes for {city_key} ({email}).")
 
-            # Create HTML table with CSS for styling
-            html_table = city_diff.to_html(index=False, classes='diff-table', border=0)
+    for i, (email, city_key, city_diff) in enumerate(to_send):
+        print(f"-> Sending {len(city_diff)} changes to {email} for {city_key}")
 
-            # Full HTML structure with RTL support for Hebrew
-            html_body = f"""
+        # Create HTML table with CSS for styling
+        html_table = city_diff.to_html(index=False, classes='diff-table', border=0)
+
+        # Full HTML structure with RTL support for Hebrew
+        html_body = f"""
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -103,12 +124,13 @@ def send_notifications(diff_df):
 </head>
 <body>
     <div class="container">
+        {report_link_html}
         <h2>עדכון רישיונות כריתה - {city_key}</h2>
         <p>שלום,</p>
         <p>נמצאו <strong>{len(city_diff)}</strong> שינויים ברשימת הרישיונות עבור היישוב <strong>{city_key}</strong>.</p>
-        
+
         {html_table}
-        
+
         <div class="footer">
             הודעה זו נשלחה באופן אוטומטי על ידי בוט מעקב רישיונות כריתה.<br>
             תאריך הפקה: {datetime.now().strftime('%d/%m/%Y %H:%M')}
@@ -117,23 +139,23 @@ def send_notifications(diff_df):
 </body>
 </html>
 """
-            # Post-process the table to add coloring classes if needed
-            html_body = html_body.replace('חדש/עודכן', '<span class="status-new">חדש/עודכן</span>')
-            html_body = html_body.replace('הוסר מהמערכת', '<span class="status-removed">הוסר מהמערכת</span>')
+        # Post-process the table to add coloring classes if needed
+        html_body = html_body.replace('חדש/עודכן', '<span class="status-new">חדש/עודכן</span>')
+        html_body = html_body.replace('הוסר מהמערכת', '<span class="status-removed">הוסר מהמערכת</span>')
 
-            # Save local copy for debugging
-            os.makedirs("tmp", exist_ok=True)
-            debug_filename = f"tmp/last_mail_{city_key.replace(' ', '_')}.html"
-            with open(debug_filename, "w", encoding="utf-8") as df:
-                df.write(html_body)
-            print(f"   Debug HTML saved to: {debug_filename}")
+        # Save local copy for debugging
+        os.makedirs("tmp", exist_ok=True)
+        debug_filename = f"tmp/last_mail_{city_key.replace(' ', '_')}.html"
+        with open(debug_filename, "w", encoding="utf-8") as df:
+            df.write(html_body)
+        print(f"   Debug HTML saved to: {debug_filename}")
 
-            # Send mail with HTML content
-            subject = f"שינויים ברישיונות כריתה - {city_key}"
-            send_html_mail([email], subject, html_body)
+        # Send mail with HTML content
+        subject = f"שינויים ברישיונות כריתה - {city_key}"
+        send_html_mail([email], subject, html_body)
+
+        if i < len(to_send) - 1:
             time.sleep(1800)  # 30 min between sends to avoid Gmail rate-limiting/blocking
-        else:
-            print(f"-> No relevant changes for {city_key} ({email}).")
 
 if __name__ == "__main__":
     diff = get_diff()
