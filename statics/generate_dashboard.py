@@ -244,6 +244,13 @@ def build_report(latest_date, df, trend):
     tr:hover {{ background-color: #fcfcfc; }}
     .chart-img {{ max-width: 100%; height: auto; border-radius: 8px; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .tabs {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        .card, .panel {{ box-shadow: none; }}
+    }}
 </style>
 </head>
 <body>
@@ -252,6 +259,7 @@ def build_report(latest_date, df, trend):
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
     <div class="cards">
@@ -368,6 +376,15 @@ def build_city_report(latest_date, df):
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .toolbar {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        header {{ position: static; box-shadow: none; }}
+        .panel {{ box-shadow: none; }}
+        thead th {{ position: static; box-shadow: none; }}
+    }}
 </style>
 </head>
 <body>
@@ -376,6 +393,7 @@ def build_city_report(latest_date, df):
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
     <div class="panel">
@@ -474,12 +492,16 @@ def build_objections_report(latest_date, df):
     city_stats["saved"] = city_stats["canceled"] + city_stats["denied"]
     city_stats = city_stats[city_stats["saved"] > 0].sort_values("saved", ascending=False)
 
+    def denied_pct(denied, total):
+        return f"{denied / total:.1%}" if total else "—"
+
     rows = "".join(
         f"<tr><td>{esc(city)}</td>"
         f"<td>{int(row.total):,}</td>"
         f"<td>{int(row.saved):,}</td>"
         f"<td>{int(row.canceled):,}</td>"
-        f"<td>{int(row.denied):,}</td></tr>"
+        f"<td>{int(row.denied):,}</td>"
+        f"<td>{denied_pct(row.denied, row.total)}</td></tr>"
         for city, row in city_stats.iterrows()
     )
 
@@ -497,6 +519,9 @@ def build_objections_report(latest_date, df):
     h1 {{ margin: 0; font-size: 24px; }}
     .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
     .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
+    .panel.explain ul {{ margin: 10px 0; padding-right: 20px; }}
+    .panel.explain li {{ margin-bottom: 8px; }}
     .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
     .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
     #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
@@ -509,6 +534,15 @@ def build_objections_report(latest_date, df):
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .toolbar {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        header {{ position: static; box-shadow: none; }}
+        .panel {{ box-shadow: none; }}
+        thead th {{ position: static; box-shadow: none; }}
+    }}
 </style>
 </head>
 <body>
@@ -517,7 +551,18 @@ def build_objections_report(latest_date, df):
         <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
+
+    <div class="panel explain">
+        <h2>מה מציג הדוח</h2>
+        <p>הדוח בודק כמה עצים שהיו אמורים להיכרת בסופו של דבר ניצלו, מתוך כלל העצים שהוגשה עליהם בקשה לכריתה בכל יישוב. עץ נחשב "ניצל" כאשר הרישיון שלו הגיע לאחת משתי תוצאות:</p>
+        <ul>
+            <li><strong>עצים - בוטל בעקבות השגה</strong> &ndash; הרישיון בוטל כי מישהו הגיש השגה (התנגדות) עליו, וההשגה התקבלה. זו ההשפעה הישירה והמדידה של הגשת התנגדות.</li>
+            <li><strong>עצים - בקשה נדחתה</strong> &ndash; הבקשה המקורית לכריתה נדחתה, בדרך כלל על ידי פקיד היערות, עוד לפני שהגיעה לשלב ההשגה הציבורית. העצים ניצלו, אך לא בהכרח בזכות השגה &ndash; במידע הקיים אין דרך לדעת אם הוגשה השגה על בקשות אלו.</li>
+        </ul>
+        <p><strong>סה"כ עצים שניצלו</strong> הוא הסכום של שתי הקטגוריות הנ"ל, כלומר כלל העצים שלא נכרתו מכל סיבה חוסמת &ndash; ואילו <strong>עצים - בוטל בעקבות השגה</strong> מבודד את תת-הקבוצה שבה השגה היא הסיבה המתועדת לביטול.</p>
+    </div>
 
     <div class="panel">
         <p class="note">מציג יישובים שבהם ניצל לפחות עץ אחד בעקבות רישיון שבוטל עקב השגה או שבקשתו נדחתה. מיון ברירת מחדל: מספר העצים שניצלו.</p>
@@ -533,6 +578,7 @@ def build_objections_report(latest_date, df):
                     <th data-col="2" class="sort-desc" onclick="sortCities(2, 'number')">סה"כ עצים שניצלו</th>
                     <th data-col="3" onclick="sortCities(3, 'number')">עצים - בוטל בעקבות השגה</th>
                     <th data-col="4" onclick="sortCities(4, 'number')">עצים - בקשה נדחתה</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">% בקשה נדחתה</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>

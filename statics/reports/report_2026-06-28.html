@@ -36,6 +36,13 @@
     tr:hover { background-color: #fcfcfc; }
     .chart-img { max-width: 100%; height: auto; border-radius: 8px; }
     footer { text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }
+    .print-btn { background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }
+    .print-btn:hover { background: #219150; }
+    @media print {
+        .print-btn, .tabs { display: none !important; }
+        body { background: #fff; padding: 0; }
+        .card, .panel { box-shadow: none; }
+    }
 </style>
 </head>
 <body>
@@ -44,6 +51,7 @@
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p>נתונים נכון לתאריך 2026-06-28 &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
     <div class="cards">
@@ -124,7 +132,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-19/07/2026 16:00 מתוך 1 תמונות ארכיון היסטוריות.<br>
+        נוצר אוטומטית ב-19/07/2026 16:16 מתוך 1 תמונות ארכיון היסטוריות.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>

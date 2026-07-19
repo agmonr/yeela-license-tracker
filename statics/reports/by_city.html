@@ -23,6 +23,15 @@
     th.sort-desc::after { content: " \25BC"; font-size: 10px; }
     tr:hover { background-color: #fcfcfc; }
     footer { text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }
+    .print-btn { background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }
+    .print-btn:hover { background: #219150; }
+    @media print {
+        .print-btn, .toolbar { display: none !important; }
+        body { background: #fff; padding: 0; }
+        header { position: static; box-shadow: none; }
+        .panel { box-shadow: none; }
+        thead th { position: static; box-shadow: none; }
+    }
 </style>
 </head>
 <body>
@@ -31,6 +40,7 @@
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p>נתונים נכון לתאריך 2026-07-19 &middot; <a href="report_2026-07-19.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
     <div class="panel">
@@ -55,7 +65,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-19/07/2026 16:02.<br>
+        נוצר אוטומטית ב-19/07/2026 16:18.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
