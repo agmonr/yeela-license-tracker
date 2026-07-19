@@ -321,7 +321,7 @@ def build_report(latest_date, df, trend):
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -459,7 +459,7 @@ def build_city_report(latest_date, df):
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -841,20 +841,20 @@ def build_open_objections_report(latest_date, df):
         <h1>רישיונות פתוחים להגשת השגה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
     <div class="panel explain">
         <h2>מה מציג הדוח</h2>
-        <p>בניגוד לשאר הדוחות באתר, זהו דוח פעולה בזמן אמת: הוא מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
+        <p>הדוח הזה מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
         <p>לתשומת לב: הנתונים הגולמיים של מערכת יעל"ה אינם כוללים שדה שמציין אם כבר הוגשה השגה על רישיון מסוים. הסטטוס היחיד הרלוונטי הוא סטטוס הרישיון עצמו - וכל הרישיונות בדוח זה נמצאים בסטטוס "{OPEN_STATUS}" בדיוק משום שטרם הוגשה עליהם השגה שהמערכת כבר עיבדה (ברגע שהשגה מתקבלת לטיפול, הרישיון עובר לסטטוס "בתהליך בחינת השגות שהוגשו" ויוצא מהדוח הזה). כלומר, מבחינת הנתונים הרשמיים - כל רישיון המופיע כאן עדיין ללא השגה שטופלה. אם השגה כבר הוגשה על ידי מישהו אך טרם עובדה במערכת, אין כרגע דרך לדעת זאת מתוך הנתונים הגלויים לציבור.</p>
     </div>
 
     <div class="cards">
         <div class="card"><div class="card-val">{n_open:,}</div><div class="card-lbl">רישיונות פתוחים להשגה</div></div>
         <div class="card"><div class="card-val">{n_cities:,}</div><div class="card-lbl">יישובים</div></div>
-        <div class="card"><div class="card-val">{n_trees:,}</div><div class="card-lbl">עצים לכריתה בסיכון</div></div>
+        <div class="card"><div class="card-val">{n_trees:,}</div><div class="card-lbl">עצים בסכנת כריתה</div></div>
     </div>
 
     <div class="panel">
