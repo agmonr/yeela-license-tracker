@@ -362,6 +362,7 @@ def build_city_report(latest_date, df):
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
     th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     tr:hover {{ background-color: #fcfcfc; }}
@@ -439,6 +440,13 @@ function filterCities() {{
     document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} ישובים`;
 }}
 filterCities();
+
+function updateStickyOffsets() {{
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
 </script>
 </body>
 </html>
