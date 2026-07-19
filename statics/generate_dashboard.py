@@ -42,6 +42,7 @@ OPEN_STATUS = "מושהה ופתוח להגשת השגה"
 DEADLINE_COL = "תאריך אחרון להגשת השגה"
 APPLICANT_COL = "מבקש"
 LICENSE_COL = "מספר רישיון"
+STREET_COL = "רחוב ומספר בית"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -767,6 +768,7 @@ def build_open_objections_report(latest_date, df):
         open_df.groupby(LICENSE_COL)
         .agg(
             city=(CITY_COL, "first"),
+            street=(STREET_COL, "first"),
             applicant=(APPLICANT_COL, "first"),
             deadline=(DEADLINE_COL, "first"),
             deadline_dt=("_deadline_dt", "first"),
@@ -795,8 +797,16 @@ def build_open_objections_report(latest_date, df):
         url = f"https://www.google.com/search?q={query}"
         return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
 
+    def maps_link(street, city):
+        street = str(street).strip() if pd.notna(street) else ""
+        address = f"{street}, {city}" if street else city
+        query = quote_plus(f"{address}, ישראל")
+        url = f"https://www.google.com/maps/search/?api=1&query={query}"
+        return f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
+
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
+        f"<td>{maps_link(row.street, row.city)}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
         f"<td>{esc(row.applicant)}</td>"
@@ -886,16 +896,17 @@ def build_open_objections_report(latest_date, df):
                 <button class="export-btn" onclick="downloadExcel('cityTable', 'open_for_objection_{latest_date}.xls')">הורדה כ-Excel</button>
             </div>
         </div>
-        <table id="cityTable" data-sort-col="5" data-sort-dir="asc">
+        <table id="cityTable" data-sort-col="6" data-sort-dir="asc">
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
-                    <th data-col="1" onclick="sortCities(1, 'string')">מיני עצים</th>
-                    <th data-col="2" onclick="sortCities(2, 'number')">עצים לכריתה</th>
-                    <th data-col="3" onclick="sortCities(3, 'string')">מבקש</th>
-                    <th data-col="4" onclick="sortCities(4, 'string')">מועד אחרון להשגה</th>
-                    <th data-col="5" class="sort-asc" onclick="sortCities(5, 'number')">ימים שנותרו</th>
-                    <th data-col="6" onclick="sortCities(6, 'number')">מספר רישיון</th>
+                    <th data-col="1" onclick="sortCities(1, 'string')">כתובת</th>
+                    <th data-col="2" onclick="sortCities(2, 'string')">מיני עצים</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">עצים לכריתה</th>
+                    <th data-col="4" onclick="sortCities(4, 'string')">מבקש</th>
+                    <th data-col="5" onclick="sortCities(5, 'string')">מועד אחרון להשגה</th>
+                    <th data-col="6" class="sort-asc" onclick="sortCities(6, 'number')">ימים שנותרו</th>
+                    <th data-col="7" onclick="sortCities(7, 'number')">מספר רישיון</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
@@ -943,7 +954,7 @@ function filterCities() {{
     const rows = document.querySelectorAll('#cityBody tr');
     let shown = 0;
     rows.forEach(r => {{
-        const match = [0, 1, 3].some(i => r.children[i].textContent.includes(q));
+        const match = [0, 2, 4].some(i => r.children[i].textContent.includes(q));
         r.style.display = match ? '' : 'none';
         if (match) shown++;
     }});
