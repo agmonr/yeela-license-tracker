@@ -15,6 +15,7 @@ import re
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import matplotlib
 matplotlib.use("Agg")
@@ -789,6 +790,11 @@ def build_open_objections_report(latest_date, df):
     def iso_or_sentinel(dt):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
+    def license_link(license_id):
+        query = quote_plus(f"יעל\"ה רישיון כריתה {int(license_id)}")
+        url = f"https://www.google.com/search?q={query}"
+        return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
+
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{esc(row.species)}</td>"
@@ -796,7 +802,7 @@ def build_open_objections_report(latest_date, df):
         f"<td>{esc(row.applicant)}</td>"
         f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
         f"<td>{format_days_left(row.days_left)}</td>"
-        f"<td>{int(license_id):,}</td></tr>"
+        f"<td>{license_link(license_id)}</td></tr>"
         for license_id, row in licenses.iterrows()
     )
 
