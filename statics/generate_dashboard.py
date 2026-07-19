@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ARCHIVE_DIR = REPO_ROOT / "archive"
 REPORTS_DIR = REPO_ROOT / "statics" / "reports"
 TREND_CACHE = REPORTS_DIR / "trend_data.csv"
+BASE_URL = "https://agmonr.github.io/yeela-license-tracker/statics/reports/"
 
 DATE_RE = re.compile(r"^full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
 
@@ -325,11 +326,17 @@ def build_city_report(latest_date, df):
         .sort_values("licenses", ascending=False)
     )
 
+    def format_ratio(cut, move):
+        if move == 0:
+            return "∞" if cut > 0 else "—"
+        return f"{cut / move:.1f}"
+
     rows = "".join(
         f"<tr><td>{esc(city)}</td>"
         f"<td>{int(row.licenses):,}</td>"
         f"<td>{int(row.cut):,}</td>"
         f"<td>{int(row.move):,}</td>"
+        f"<td>{format_ratio(row.cut, row.move)}</td>"
         f"<td>{int(row.keep):,}</td>"
         f"<td>{int(row.species):,}</td></tr>"
         for city, row in city_stats.iterrows()
@@ -344,7 +351,7 @@ def build_city_report(latest_date, df):
 <style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
     .container {{ max-width: 900px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
     header a {{ color: #ecf0f1; }}
     h1 {{ margin: 0; font-size: 24px; }}
     .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
@@ -381,8 +388,9 @@ def build_city_report(latest_date, df):
                     <th data-col="1" onclick="sortCities(1, 'number')">רישיונות</th>
                     <th data-col="2" onclick="sortCities(2, 'number')">לכריתה</th>
                     <th data-col="3" onclick="sortCities(3, 'number')">להעתקה</th>
-                    <th data-col="4" onclick="sortCities(4, 'number')">לשימור</th>
-                    <th data-col="5" onclick="sortCities(5, 'number')">מיני עצים</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">יחס כריתה/העתקה</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">לשימור</th>
+                    <th data-col="6" onclick="sortCities(6, 'number')">מיני עצים</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
@@ -459,9 +467,34 @@ def build_index(trend):
 <body>
 <div class="container">
     <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
+    <p><a href="current.html">הדוח האחרון</a></p>
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
+    <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
 </div>
+</body>
+</html>
+"""
+
+
+def build_ai_index(snapshots):
+    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html"]
+    lines += [f"{BASE_URL}report_{date_str}.html" for date_str in sorted(snapshots)]
+    return "\n".join(lines) + "\n"
+
+
+def build_current_redirect(latest_date):
+    target = f"report_{latest_date}.html"
+    return f"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="0; url={target}">
+<link rel="canonical" href="{target}">
+<title>הדוח האחרון - רישיונות כריתה</title>
+</head>
+<body>
+<p>מעביר לדוח האחרון: <a href="{target}">{target}</a></p>
 </body>
 </html>
 """
@@ -496,9 +529,17 @@ def main():
     index_path.write_text(build_index(trend), encoding="utf-8")
     print(f"Index written to {index_path}")
 
+    current_path = REPORTS_DIR / "current.html"
+    current_path.write_text(build_current_redirect(latest_date), encoding="utf-8")
+    print(f"Current-report redirect written to {current_path}")
+
     city_report_path = REPORTS_DIR / "by_city.html"
     city_report_path.write_text(build_city_report(latest_date, latest_df), encoding="utf-8")
     print(f"City report written to {city_report_path}")
+
+    ai_index_path = REPORTS_DIR / "llms.txt"
+    ai_index_path.write_text(build_ai_index(snapshots), encoding="utf-8")
+    print(f"AI index written to {ai_index_path}")
 
 
 if __name__ == "__main__":

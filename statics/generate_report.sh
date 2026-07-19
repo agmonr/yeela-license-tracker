@@ -4,6 +4,7 @@
 # snapshot to already be in archive/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source venv/bin/activate
 
 python3 statics/generate_dashboard.py
 
