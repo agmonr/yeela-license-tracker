@@ -476,10 +476,10 @@ def build_objections_report(latest_date, df):
 
     rows = "".join(
         f"<tr><td>{esc(city)}</td>"
+        f"<td>{int(row.total):,}</td>"
         f"<td>{int(row.saved):,}</td>"
         f"<td>{int(row.canceled):,}</td>"
-        f"<td>{int(row.denied):,}</td>"
-        f"<td>{int(row.total):,}</td></tr>"
+        f"<td>{int(row.denied):,}</td></tr>"
         for city, row in city_stats.iterrows()
     )
 
@@ -525,14 +525,14 @@ def build_objections_report(latest_date, df):
             <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
             <span id="cityCount"></span>
         </div>
-        <table id="cityTable" data-sort-col="1" data-sort-dir="desc">
+        <table id="cityTable" data-sort-col="2" data-sort-dir="desc">
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
-                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">סה"כ עצים שניצלו</th>
-                    <th data-col="2" onclick="sortCities(2, 'number')">עצים - בוטל בעקבות השגה</th>
-                    <th data-col="3" onclick="sortCities(3, 'number')">עצים - בקשה נדחתה</th>
-                    <th data-col="4" onclick="sortCities(4, 'number')">סה"כ עצים לכריתה ביישוב</th>
+                    <th data-col="1" onclick="sortCities(1, 'number')">סה"כ עצים לכריתה ביישוב</th>
+                    <th data-col="2" class="sort-desc" onclick="sortCities(2, 'number')">סה"כ עצים שניצלו</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">עצים - בוטל בעקבות השגה</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">עצים - בקשה נדחתה</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
