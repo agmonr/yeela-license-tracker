@@ -43,6 +43,7 @@ DEADLINE_COL = "תאריך אחרון להגשת השגה"
 APPLICANT_COL = "מבקש"
 LICENSE_COL = "מספר רישיון"
 STREET_COL = "רחוב ומספר בית"
+REASON_COL = "סיבת בקשה"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -764,6 +765,7 @@ def build_open_objections_report(latest_date, df):
             shown += f" ועוד {len(uniq) - 3}"
         return shown
 
+    has_reason = REASON_COL in open_df.columns
     licenses = (
         open_df.groupby(LICENSE_COL)
         .agg(
@@ -775,9 +777,18 @@ def build_open_objections_report(latest_date, df):
             days_left=("_days_left", "first"),
             trees_to_cut=(CUT_COL, "sum"),
             species=(SPECIES_COL, join_species),
+            **({"reason": (REASON_COL, "first")} if has_reason else {}),
         )
         .sort_values("days_left", ascending=True, na_position="last")
     )
+    # Older archive snapshots (fetched before request-reason enrichment was
+    # added to fetch_data.py) won't have REASON_COL at all - fall back to
+    # blank rather than a KeyError, since this report only ever runs
+    # against the latest snapshot but might be re-run against one fetched
+    # before this feature existed.
+    if "reason" not in licenses.columns:
+        licenses["reason"] = ""
+    licenses["reason"] = licenses["reason"].fillna("")
 
     def format_days_left(days):
         if pd.isna(days):
@@ -807,6 +818,7 @@ def build_open_objections_report(latest_date, df):
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{maps_link(row.street, row.city)}</td>"
+        f"<td>{esc(row.reason) if row.reason else '—'}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
         f"<td>{esc(row.applicant)}</td>"
@@ -889,24 +901,25 @@ def build_open_objections_report(latest_date, df):
 
     <div class="panel">
         <div class="toolbar">
-            <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, מין עץ או מבקש..." oninput="filterCities()">
+            <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
             <span id="cityCount"></span>
             <div class="toolbar-actions">
                 <button class="export-btn" onclick="downloadCSV('cityTable', 'open_for_objection_{latest_date}.csv')">הורדה כ-CSV</button>
                 <button class="export-btn" onclick="downloadExcel('cityTable', 'open_for_objection_{latest_date}.xls')">הורדה כ-Excel</button>
             </div>
         </div>
-        <table id="cityTable" data-sort-col="6" data-sort-dir="asc">
+        <table id="cityTable" data-sort-col="7" data-sort-dir="asc">
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
                     <th data-col="1" onclick="sortCities(1, 'string')">כתובת</th>
-                    <th data-col="2" onclick="sortCities(2, 'string')">מיני עצים</th>
-                    <th data-col="3" onclick="sortCities(3, 'number')">עצים לכריתה</th>
-                    <th data-col="4" onclick="sortCities(4, 'string')">מבקש</th>
-                    <th data-col="5" onclick="sortCities(5, 'string')">מועד אחרון להשגה</th>
-                    <th data-col="6" class="sort-asc" onclick="sortCities(6, 'number')">ימים שנותרו</th>
-                    <th data-col="7" onclick="sortCities(7, 'number')">מספר רישיון</th>
+                    <th data-col="2" onclick="sortCities(2, 'string')">סיבת בקשה</th>
+                    <th data-col="3" onclick="sortCities(3, 'string')">מיני עצים</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">עצים לכריתה</th>
+                    <th data-col="5" onclick="sortCities(5, 'string')">מבקש</th>
+                    <th data-col="6" onclick="sortCities(6, 'string')">מועד אחרון להשגה</th>
+                    <th data-col="7" class="sort-asc" onclick="sortCities(7, 'number')">ימים שנותרו</th>
+                    <th data-col="8" onclick="sortCities(8, 'number')">מספר רישיון</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
@@ -954,7 +967,7 @@ function filterCities() {{
     const rows = document.querySelectorAll('#cityBody tr');
     let shown = 0;
     rows.forEach(r => {{
-        const match = [0, 2, 4].some(i => r.children[i].textContent.includes(q));
+        const match = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
         r.style.display = match ? '' : 'none';
         if (match) shown++;
     }});
