@@ -36,18 +36,26 @@ relevant script directly against the venv (`source venv/bin/activate`).
 
 ## Pipeline architecture
 
-The daily flow (`run_bot.sh`) is: **scrape → rotate snapshots → diff →
-notify**.
+The daily flow (`run_bot.sh`) is: **scrape → diff → notify → push archive**.
 
 1. **`fetch_data.py`** drives Playwright (headless Chromium) against the
-   portal, exports an Excel file, converts it to
-   `archive/full_licenses_v1.csv`, and rotates older snapshots
-   (`v1→v2→v3→...`, oldest dropped) via `rotate_files()`.
-2. **`notify_changes.py`** diffs `archive/full_licenses_v1.csv` (new) against
-   `v2.csv` (previous) with a pandas outer-merge, tags rows
+   portal, exports an Excel file, and converts it straight to
+   `archive/full_licenses_<YYYY-MM-DD>.csv`, dated by the day it was
+   downloaded (overwriting if run again the same day). There's no
+   numbered rotation — each day gets its own permanent filename, so
+   nothing needs to be capped or shifted.
+2. **`notify_changes.py`** diffs the two most recent dated snapshots in
+   `archive/` (found by globbing `full_licenses_*.csv` and sorting by the
+   date in the filename) with a pandas outer-merge, tags rows
    `חדש/עודכן`/`הוסר מהמערכת`, then for each `(email, city)` subscriber from
    `sheet_subscribers.py` filters the diff by city substring match and
    emails an HTML table via `mailer.py`. Debug copies land in `tmp/`.
+3. **`push_archive.sh`** commits/pushes any new or changed
+   `archive/full_licenses_*.csv` to `main` — since `fetch_data.py` already
+   writes date-named files directly, this is just a `git add` + commit +
+   push, and it's idempotent (no-op if nothing changed). This step is
+   what keeps the archive updated in git every day; it does not run from
+   the weekly flow.
 
 **`download_trees.py` is a second, self-contained implementation of the same
 scrape→rotate→diff→notify flow** (own Playwright download, own rotation, own
@@ -56,30 +64,27 @@ treat it as an alternate/legacy path, not the live one, unless a task says
 otherwise. Don't assume changes to `fetch_data.py`/`notify_changes.py` need
 mirroring there or vice versa without checking which is actually in use.
 
-The weekly flow (`run_weekly_report.sh`) runs three steps in order:
+The weekly flow (`run_weekly_report.sh`) runs two steps in order — archive
+management is exclusively a daily concern (see above), so this flow only
+covers the admin email and the dashboard:
 
-1. `weekly_report.py` diffs current `v1.csv` against whichever snapshot's
-   mtime is closest to 7 days ago (rotation isn't strictly daily), and
-   emails `ADMIN_EMAILS` a summary + full detail table.
-2. **`push_archive.sh`** copies each `archive/full_licenses_v*.csv` to a
-   date-named sibling (`full_licenses_YYYY-MM-DD.csv`, derived from the
-   file's mtime) and commits/pushes those to `main`. The `v*` files stay
-   gitignored (they're the live rotation state the other scripts depend
-   on); only the dated copies — which fall outside the
-   `full_licenses_v*.csv` gitignore pattern — are meant to be tracked.
-   Idempotent: unchanged content produces no commit.
-3. **`statics/generate_report.sh`** runs `statics/generate_dashboard.py`
-   and commits/pushes the result. It must run after `push_archive.sh`
-   since it depends on that week's dated snapshot already being written.
-   The Python script reads *only* the dated `archive/full_licenses_YYYY-MM-DD.csv`
-   files (not the gitignored `v*` ones, for reproducibility from the repo
-   alone), builds a self-contained HTML dashboard (summary cards +
-   matplotlib charts embedded as base64 PNGs: trend over time, top
-   species/cities for cutting, status breakdown) into
-   `statics/reports/report_<date>.html`, and updates
+1. `weekly_report.py` diffs the latest dated snapshot against whichever
+   dated snapshot is closest to 7 days before it (by filename date, not
+   mtime — snapshots aren't written on a strict daily cadence), and emails
+   `ADMIN_EMAILS` a summary + full detail table.
+2. **`statics/generate_report.sh`** runs `statics/generate_dashboard.py`
+   and commits/pushes the result. It relies on `run_bot.sh`'s daily
+   `push_archive.sh` having already committed that day's snapshot — since
+   both flows run from the same cron user against the same repo, by the
+   time the weekly report runs the archive is already current. The Python
+   script reads *only* the dated `archive/full_licenses_YYYY-MM-DD.csv`
+   files, for reproducibility from the repo alone, builds a self-contained
+   HTML dashboard (summary cards + matplotlib charts embedded as base64
+   PNGs: trend over time, top species/cities for cutting, status
+   breakdown) into `statics/reports/report_<date>.html`, and updates
    `statics/reports/index.html` and `statics/reports/trend_data.csv` (a
    cache of per-date aggregates, extended incrementally so old snapshot
-   CSVs don't get re-read on every run). Also idempotent.
+   CSVs don't get re-read on every run). Idempotent.
 
 ## Mail delivery
 

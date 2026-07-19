@@ -1,9 +1,12 @@
 import os
 import glob
+import re
 from datetime import datetime, timedelta
 import pandas as pd
 from config import ADMIN_EMAILS
 from mailer import send_html_mail
+
+DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
 
 
 def normalize_nums(val):
@@ -17,22 +20,32 @@ def load_normalized(path):
     return df.map(normalize_nums)
 
 
+def get_dated_snapshots():
+    """Returns (date, path) for each archive/full_licenses_<date>.csv, sorted ascending."""
+    snapshots = []
+    for path in glob.glob("archive/full_licenses_*.csv"):
+        m = DATE_RE.search(path)
+        if m:
+            snapshots.append((datetime.strptime(m.group(1), "%Y-%m-%d"), path))
+    snapshots.sort()
+    return snapshots
+
+
 def find_week_ago_file():
     """
-    Picks the full_licenses snapshot whose mtime is closest to (but not
-    newer than) 7 days ago, to use as the baseline for the weekly diff.
-    Snapshots aren't rotated on a strict daily cadence, so version number
-    alone isn't a reliable stand-in for elapsed time.
+    Picks the dated snapshot whose date is closest to (but not newer than)
+    7 days before the latest snapshot, to use as the baseline for the
+    weekly diff. Snapshots aren't written on a strict daily cadence, so the
+    latest date (not "today") is the reference point.
     """
-    candidates = glob.glob("archive/full_licenses_v*.csv")
-    if not candidates:
+    snapshots = get_dated_snapshots()
+    if len(snapshots) < 2:
         return None
-    cutoff = datetime.now() - timedelta(days=7)
-    best_path, best_mtime = None, None
-    for path in candidates:
-        mtime = datetime.fromtimestamp(os.path.getmtime(path))
-        if mtime <= cutoff and (best_mtime is None or mtime > best_mtime):
-            best_path, best_mtime = path, mtime
+    cutoff = snapshots[-1][0] - timedelta(days=7)
+    best_path, best_date = None, None
+    for snap_date, path in snapshots[:-1]:
+        if snap_date <= cutoff and (best_date is None or snap_date > best_date):
+            best_path, best_date = path, snap_date
     return best_path
 
 
@@ -41,10 +54,11 @@ def get_weekly_diff():
     Compares the current snapshot against the ~week-old baseline and
     returns a DataFrame of both added and removed rows across all cities.
     """
-    current_path = "archive/full_licenses_v1.csv"
-    if not os.path.exists(current_path):
-        print("Error: archive/full_licenses_v1.csv missing.")
+    snapshots = get_dated_snapshots()
+    if not snapshots:
+        print("Error: no dated snapshots found in archive/.")
         return None
+    current_path = snapshots[-1][1]
 
     baseline_path = find_week_ago_file()
     if baseline_path is None:

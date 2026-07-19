@@ -1,30 +1,10 @@
 import asyncio
 import os
+from datetime import date
 import pandas as pd
 from playwright.async_api import async_playwright
 
 ARCHIVE_DIR = "archive"
-
-def rotate_files():
-    """
-    Shifts existing files: v9 -> v10, ..., v1 -> v2.
-    """
-    base_name = os.path.join(ARCHIVE_DIR, "full_licenses")
-    print("Rotating historical files...")
-    for i in range(365, 0, -1):
-        old_file = f"{base_name}_v{i}.csv"
-        new_file = f"{base_name}_v{i+1}.csv"
-        if os.path.exists(old_file):
-            if i == 9 and os.path.exists(f"{base_name}_v10.csv"):
-                os.remove(f"{base_name}_v10.csv")
-            os.rename(old_file, new_file)
-
-    temp_csv = os.path.join(ARCHIVE_DIR, "temp_full.csv")
-    if os.path.exists(temp_csv):
-        v1_path = f"{base_name}_v1.csv"
-        if os.path.exists(v1_path): os.remove(v1_path)
-        os.rename(temp_csv, v1_path)
-        print(f"New data saved as {v1_path}")
 
 async def download_full_list():
     async with async_playwright() as p:
@@ -56,10 +36,11 @@ async def download_full_list():
 
             print("Converting to CSV...")
             df = pd.read_excel(temp_xls)
-            df.to_csv(os.path.join(ARCHIVE_DIR, "temp_full.csv"), index=False, encoding='utf-8-sig')
+            dest = os.path.join(ARCHIVE_DIR, f"full_licenses_{date.today().isoformat()}.csv")
+            df.to_csv(dest, index=False, encoding='utf-8-sig')
             os.remove(temp_xls)
-            print("Download and conversion successful.")
-            
+            print(f"Saved as {dest}")
+
         except Exception as e:
             print(f"Error during download: {e}")
         finally:
@@ -67,4 +48,3 @@ async def download_full_list():
 
 if __name__ == "__main__":
     asyncio.run(download_full_list())
-    rotate_files()

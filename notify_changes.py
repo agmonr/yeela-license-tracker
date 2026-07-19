@@ -1,22 +1,37 @@
+import glob
 import os
+import re
 import pandas as pd
 from datetime import datetime
 import time
 from sheet_subscribers import get_subscribers
 from mailer import send_html_mail
 
+DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
+
+def get_dated_snapshots():
+    """Returns (date_str, path) for each archive/full_licenses_<date>.csv, sorted ascending."""
+    snapshots = []
+    for path in glob.glob("archive/full_licenses_*.csv"):
+        m = DATE_RE.search(path)
+        if m:
+            snapshots.append((m.group(1), path))
+    snapshots.sort()
+    return snapshots
+
 def get_diff():
     """
-    Compares v1 and v2 and returns a DataFrame of both added and removed rows.
+    Compares the two most recent dated snapshots and returns a DataFrame
+    of both added and removed rows.
     """
-    v1_path = "archive/full_licenses_v1.csv"
-    v2_path = "archive/full_licenses_v2.csv"
-    
-    if not os.path.exists(v1_path) or not os.path.exists(v2_path):
-        print("Need both v1 and v2 files to compare.")
+    snapshots = get_dated_snapshots()
+    if len(snapshots) < 2:
+        print("Need at least two dated snapshots in archive/ to compare.")
         return None
 
-    print("Detecting all changes (additions and deletions)...")
+    (_, v2_path), (_, v1_path) = snapshots[-2], snapshots[-1]
+
+    print(f"Detecting all changes (additions and deletions) between {v2_path} and {v1_path}...")
     # Load and normalize
     df_new = pd.read_csv(v1_path, dtype=str).fillna('').map(lambda x: str(x).strip())
     df_old = pd.read_csv(v2_path, dtype=str).fillna('').map(lambda x: str(x).strip())
@@ -116,7 +131,7 @@ def send_notifications(diff_df):
             # Send mail with HTML content
             subject = f"שינויים ברישיונות כריתה - {city_key}"
             send_html_mail([email], subject, html_body)
-            time.sleep(1)
+            time.sleep(1800)  # 30 min between sends to avoid Gmail rate-limiting/blocking
         else:
             print(f"-> No relevant changes for {city_key} ({email}).")
 
