@@ -320,7 +320,7 @@ def build_report(latest_date, df, trend):
     <header>
         <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="applicants.html">דוח מבקשים</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -457,7 +457,7 @@ def build_city_report(latest_date, df):
     <header>
         <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="applicants.html">דוח מבקשים</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -623,7 +623,7 @@ def build_objections_report(latest_date, df):
     <header>
         <h1>דוח אפקטיביות השגות/התנגדויות לפי יישוב</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="report_{latest_date}.html">הדוח המלא</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="applicants.html">דוח מבקשים</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -724,12 +724,40 @@ def build_open_objections_report(latest_date, df):
     Unlike the other reports (retrospective statistics), this one exists to
     drive real-time action - so days-left is computed against latest_date
     (the snapshot's own date), not wall-clock "today", keeping the report
-    reproducible on rebuild."""
+    reproducible on rebuild.
+
+    A single license spans one row per tree species, with city/applicant/
+    deadline repeated identically across those rows - so this groups by
+    LICENSE_COL first and sums CUT_COL per license, rather than listing
+    species-line rows directly. Without that grouping, a license covering
+    many species would show a misleadingly small per-row tree count (often
+    0, e.g. for a species that's only being moved/preserved) instead of the
+    real total trees at stake for that license."""
     open_df = df[df[STATUS_COL] == OPEN_STATUS].copy()
     open_df["_deadline_dt"] = pd.to_datetime(open_df[DEADLINE_COL], format="%d/%m/%Y", errors="coerce")
     ref_date = pd.to_datetime(latest_date)
     open_df["_days_left"] = (open_df["_deadline_dt"] - ref_date).dt.days
-    open_df = open_df.sort_values("_days_left", ascending=True, na_position="last")
+
+    def join_species(species):
+        uniq = sorted(set(species))
+        shown = ", ".join(uniq[:3])
+        if len(uniq) > 3:
+            shown += f" ועוד {len(uniq) - 3}"
+        return shown
+
+    licenses = (
+        open_df.groupby(LICENSE_COL)
+        .agg(
+            city=(CITY_COL, "first"),
+            applicant=(APPLICANT_COL, "first"),
+            deadline=(DEADLINE_COL, "first"),
+            deadline_dt=("_deadline_dt", "first"),
+            days_left=("_days_left", "first"),
+            trees_to_cut=(CUT_COL, "sum"),
+            species=(SPECIES_COL, join_species),
+        )
+        .sort_values("days_left", ascending=True, na_position="last")
+    )
 
     def format_days_left(days):
         if pd.isna(days):
@@ -745,19 +773,19 @@ def build_open_objections_report(latest_date, df):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
     rows = "".join(
-        f"<tr><td>{esc(row[CITY_COL])}</td>"
-        f"<td>{esc(row[SPECIES_COL])}</td>"
-        f"<td>{int(row[CUT_COL]):,}</td>"
-        f"<td>{esc(row[APPLICANT_COL])}</td>"
-        f"<td data-sort=\"{iso_or_sentinel(row['_deadline_dt'])}\">{esc(row[DEADLINE_COL])}</td>"
-        f"<td>{format_days_left(row['_days_left'])}</td>"
-        f"<td>{int(row[LICENSE_COL]):,}</td></tr>"
-        for _, row in open_df.iterrows()
+        f"<tr><td>{esc(row.city)}</td>"
+        f"<td>{esc(row.species)}</td>"
+        f"<td>{int(row.trees_to_cut):,}</td>"
+        f"<td>{esc(row.applicant)}</td>"
+        f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
+        f"<td>{format_days_left(row.days_left)}</td>"
+        f"<td>{int(license_id):,}</td></tr>"
+        for license_id, row in licenses.iterrows()
     )
 
-    n_open = len(open_df)
-    n_cities = open_df[CITY_COL].nunique()
-    n_trees = int(open_df[CUT_COL].sum())
+    n_open = len(licenses)
+    n_cities = licenses["city"].nunique()
+    n_trees = int(licenses["trees_to_cut"].sum())
 
     return f"""<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -809,7 +837,7 @@ def build_open_objections_report(latest_date, df):
     <header>
         <h1>רישיונות פתוחים להגשת השגה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
-        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="applicants.html">דוח מבקשים</a> &middot; <a href="index.html">כל הדוחות</a></p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
     </header>
 
@@ -837,7 +865,7 @@ def build_open_objections_report(latest_date, df):
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
-                    <th data-col="1" onclick="sortCities(1, 'string')">מין העץ</th>
+                    <th data-col="1" onclick="sortCities(1, 'string')">מיני עצים</th>
                     <th data-col="2" onclick="sortCities(2, 'number')">עצים לכריתה</th>
                     <th data-col="3" onclick="sortCities(3, 'string')">מבקש</th>
                     <th data-col="4" onclick="sortCities(4, 'string')">מועד אחרון להשגה</th>
@@ -910,6 +938,175 @@ window.addEventListener('resize', updateStickyOffsets);
 """
 
 
+def build_applicants_report(latest_date, df):
+    """Ranks requesting entities (מבקש - municipalities, companies,
+    individuals) by trees requested for cutting, cross-referenced against
+    how many of those trees ended up saved via objection/denial. Meant to
+    help activists identify which applicants to focus advocacy on, and how
+    effective past objections have been against each one specifically."""
+    canceled_trees = df[df[STATUS_COL] == CANCELED_STATUS].groupby(APPLICANT_COL)[CUT_COL].sum()
+    denied_trees = df[df[STATUS_COL] == DENIED_STATUS].groupby(APPLICANT_COL)[CUT_COL].sum()
+
+    applicant_stats = (
+        df.groupby(APPLICANT_COL)
+        .agg(
+            requested=(CUT_COL, "sum"),
+            licenses=(APPLICANT_COL, "size"),
+            cities=(CITY_COL, "nunique"),
+        )
+    )
+    applicant_stats["canceled"] = canceled_trees
+    applicant_stats["denied"] = denied_trees
+    applicant_stats = applicant_stats.fillna(0)
+    applicant_stats["saved"] = applicant_stats["canceled"] + applicant_stats["denied"]
+    applicant_stats = applicant_stats[applicant_stats["requested"] > 0].sort_values("requested", ascending=False)
+
+    def saved_pct(saved, requested):
+        return f"{saved / requested:.1%}" if requested else "—"
+
+    rows = "".join(
+        f"<tr><td>{esc(applicant)}</td>"
+        f"<td>{int(row.requested):,}</td>"
+        f"<td>{int(row.licenses):,}</td>"
+        f"<td>{int(row.cities):,}</td>"
+        f"<td>{int(row.saved):,}</td>"
+        f"<td>{saved_pct(row.saved, row.requested)}</td></tr>"
+        for applicant, row in applicant_stats.iterrows()
+    )
+
+    n_applicants = len(applicant_stats)
+    n_requested = int(applicant_stats["requested"].sum())
+
+    return f"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דוח מבקשים - עצים לכריתה לפי גורם מבקש ({latest_date})</title>
+<style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
+    .container {{ max-width: 1000px; margin: 0 auto; }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
+    header a {{ color: #ecf0f1; }}
+    h1 {{ margin: 0; font-size: 24px; }}
+    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
+    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
+    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
+    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
+    .export-btn:hover {{ background: #2980b9; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
+    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
+    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
+    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
+    tr:hover {{ background-color: #fcfcfc; }}
+    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .toolbar {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        header {{ position: static; box-shadow: none; }}
+        .panel {{ box-shadow: none; }}
+        thead th {{ position: static; box-shadow: none; }}
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>דוח מבקשים: עצים לכריתה לפי גורם מבקש</h1>
+        <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; <a href="objections.html">דוח אפקטיביות השגות</a> &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="index.html">כל הדוחות</a></p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
+    </header>
+
+    <div class="panel">
+        <p class="note">מדרג את הגורמים המבקשים (רשויות, חברות, יחידים) לפי סך העצים שביקשו לכרות, ומראה כמה מהם ניצלו בפועל בעקבות השגה או דחיית בקשה. עוזר לזהות למי כדאי להפנות מאמצי סינגור. מיון ברירת מחדל: סך העצים המבוקשים לכריתה.</p>
+        <div class="toolbar">
+            <input type="text" id="citySearch" placeholder="חיפוש לפי שם מבקש..." oninput="filterCities()">
+            <span id="cityCount"></span>
+            <div class="toolbar-actions">
+                <button class="export-btn" onclick="downloadCSV('cityTable', 'applicants_{latest_date}.csv')">הורדה כ-CSV</button>
+                <button class="export-btn" onclick="downloadExcel('cityTable', 'applicants_{latest_date}.xls')">הורדה כ-Excel</button>
+            </div>
+        </div>
+        <table id="cityTable" data-sort-col="1" data-sort-dir="desc">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortCities(0, 'string')">מבקש</th>
+                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">עצים מבוקשים לכריתה</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">מספר רישיונות</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">מספר יישובים</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">עצים שניצלו</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">% שניצלו</th>
+                </tr>
+            </thead>
+            <tbody id="cityBody">{rows}</tbody>
+        </table>
+    </div>
+
+    <footer>
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')} &middot; {n_applicants:,} גורמים מבקשים, {n_requested:,} עצים מבוקשים לכריתה בסך הכל.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
+</div>
+<script>
+{EXPORT_SCRIPT}
+function sortCities(col, type) {{
+    const table = document.getElementById('cityTable');
+    const tbody = document.getElementById('cityBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dir = (table.dataset.sortCol == col && table.dataset.sortDir === 'asc') ? 'desc' : 'asc';
+
+    rows.sort((a, b) => {{
+        let va = a.children[col].textContent.trim();
+        let vb = b.children[col].textContent.trim();
+        if (type === 'number') {{
+            va = parseFloat(va.replace(/,/g, '')) || 0;
+            vb = parseFloat(vb.replace(/,/g, '')) || 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        }}
+        return dir === 'asc' ? va.localeCompare(vb, 'he') : vb.localeCompare(va, 'he');
+    }});
+    rows.forEach(r => tbody.appendChild(r));
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    document.querySelectorAll('#cityTable th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    document.querySelector(`#cityTable th[data-col="${{col}}"]`).classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+}}
+
+function filterCities() {{
+    const q = document.getElementById('citySearch').value.trim();
+    const rows = document.querySelectorAll('#cityBody tr');
+    let shown = 0;
+    rows.forEach(r => {{
+        const match = r.children[0].textContent.includes(q);
+        r.style.display = match ? '' : 'none';
+        if (match) shown++;
+    }});
+    document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} מבקשים`;
+}}
+filterCities();
+
+function updateStickyOffsets() {{
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
+</script>
+</body>
+</html>
+"""
+
+
 def build_index(trend):
     rows = "".join(
         f'<li><a href="report_{date_str}.html">{date_str}</a></li>'
@@ -936,6 +1133,7 @@ def build_index(trend):
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
     <p><a href="objections.html">דוח אפקטיביות השגות/התנגדויות לפי יישוב</a></p>
     <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
+    <p><a href="applicants.html">דוח מבקשים: עצים לכריתה לפי גורם מבקש</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
 </div>
@@ -945,7 +1143,13 @@ def build_index(trend):
 
 
 def build_ai_index(snapshots):
-    lines = [f"{BASE_URL}index.html", f"{BASE_URL}by_city.html", f"{BASE_URL}objections.html", f"{BASE_URL}open_for_objection.html"]
+    lines = [
+        f"{BASE_URL}index.html",
+        f"{BASE_URL}by_city.html",
+        f"{BASE_URL}objections.html",
+        f"{BASE_URL}open_for_objection.html",
+        f"{BASE_URL}applicants.html",
+    ]
     lines += [f"{BASE_URL}report_{date_str}.html" for date_str in sorted(snapshots)]
     return "\n".join(lines) + "\n"
 
@@ -1011,6 +1215,10 @@ def main():
     open_objections_report_path = REPORTS_DIR / "open_for_objection.html"
     open_objections_report_path.write_text(build_open_objections_report(latest_date, latest_df), encoding="utf-8")
     print(f"Open-for-objection report written to {open_objections_report_path}")
+
+    applicants_report_path = REPORTS_DIR / "applicants.html"
+    applicants_report_path.write_text(build_applicants_report(latest_date, latest_df), encoding="utf-8")
+    print(f"Applicants report written to {applicants_report_path}")
 
     ai_index_path = REPORTS_DIR / "llms.txt"
     ai_index_path.write_text(build_ai_index(snapshots), encoding="utf-8")
