@@ -455,28 +455,31 @@ window.addEventListener('resize', updateStickyOffsets);
 
 
 def build_objections_report(latest_date, df):
-    """Effectiveness of התנגדות (objection) per city: licenses that ended up
-    cancelled following an objection (CANCELED_STATUS) or with the original
-    request denied (DENIED_STATUS), against that city's total license count.
-    Only cities with at least one such license are listed, sorted by that
-    combined count (the "successful" objection outcomes) descending."""
-    city_stats = (
-        df.groupby(CITY_COL)
-        .agg(
-            licenses=(CITY_COL, "size"),
-            canceled=(STATUS_COL, lambda s: int((s == CANCELED_STATUS).sum())),
-            denied=(STATUS_COL, lambda s: int((s == DENIED_STATUS).sum())),
-        )
-    )
-    city_stats["rejected"] = city_stats["canceled"] + city_stats["denied"]
-    city_stats = city_stats[city_stats["rejected"] > 0].sort_values("rejected", ascending=False)
+    """Effectiveness of התנגדות (objection) per city, measured in trees
+    (CUT_COL) rather than license counts: trees that ended up saved because
+    the license was cancelled following an objection (CANCELED_STATUS) or
+    the original request was denied (DENIED_STATUS), against that city's
+    total trees across all licenses. Only cities with at least one tree
+    saved this way are listed, sorted by that combined tree count (the
+    "successful" objection outcomes) descending."""
+    canceled_trees = df[df[STATUS_COL] == CANCELED_STATUS].groupby(CITY_COL)[CUT_COL].sum()
+    denied_trees = df[df[STATUS_COL] == DENIED_STATUS].groupby(CITY_COL)[CUT_COL].sum()
+    total_trees = df.groupby(CITY_COL)[CUT_COL].sum()
+
+    city_stats = pd.DataFrame({
+        "canceled": canceled_trees,
+        "denied": denied_trees,
+        "total": total_trees,
+    }).fillna(0).astype(int)
+    city_stats["saved"] = city_stats["canceled"] + city_stats["denied"]
+    city_stats = city_stats[city_stats["saved"] > 0].sort_values("saved", ascending=False)
 
     rows = "".join(
         f"<tr><td>{esc(city)}</td>"
-        f"<td>{int(row.rejected):,}</td>"
+        f"<td>{int(row.saved):,}</td>"
         f"<td>{int(row.canceled):,}</td>"
         f"<td>{int(row.denied):,}</td>"
-        f"<td>{int(row.licenses):,}</td></tr>"
+        f"<td>{int(row.total):,}</td></tr>"
         for city, row in city_stats.iterrows()
     )
 
@@ -485,7 +488,7 @@ def build_objections_report(latest_date, df):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>דוח אפקטיביות השגות/התנגדויות - רישיונות כריתה ({latest_date})</title>
+<title>דוח אפקטיביות השגות/התנגדויות - עצים שניצלו ({latest_date})</title>
 <style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
     .container {{ max-width: 900px; margin: 0 auto; }}
@@ -517,7 +520,7 @@ def build_objections_report(latest_date, df):
     </header>
 
     <div class="panel">
-        <p class="note">מציג יישובים שבהם לפחות רישיון אחד בוטל בעקבות השגה או שהבקשה נדחתה. מיון ברירת מחדל: מספר הרישיונות שנדחו/בוטלו.</p>
+        <p class="note">מציג יישובים שבהם ניצל לפחות עץ אחד בעקבות רישיון שבוטל עקב השגה או שבקשתו נדחתה. מיון ברירת מחדל: מספר העצים שניצלו.</p>
         <div class="toolbar">
             <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
             <span id="cityCount"></span>
@@ -526,10 +529,10 @@ def build_objections_report(latest_date, df):
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
-                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">סה"כ נדחו/בוטלו</th>
-                    <th data-col="2" onclick="sortCities(2, 'number')">בוטל בעקבות השגה</th>
-                    <th data-col="3" onclick="sortCities(3, 'number')">בקשה נדחתה</th>
-                    <th data-col="4" onclick="sortCities(4, 'number')">סה"כ רישיונות ביישוב</th>
+                    <th data-col="1" class="sort-desc" onclick="sortCities(1, 'number')">סה"כ עצים שניצלו</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">עצים - בוטל בעקבות השגה</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">עצים - בקשה נדחתה</th>
+                    <th data-col="4" onclick="sortCities(4, 'number')">סה"כ עצים לכריתה ביישוב</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
