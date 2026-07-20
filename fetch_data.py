@@ -3,9 +3,16 @@ import json
 import math
 import os
 import sqlite3
+import sys
 from datetime import date
 import pandas as pd
 from playwright.async_api import async_playwright
+
+# Stdout is fully block-buffered (not line-buffered) when it's not a TTY -
+# e.g. redirected to a log file by a background runner - so without this,
+# progress prints below only become visible after the buffer fills or the
+# process exits, making a long-running scrape look hung when it isn't.
+sys.stdout.reconfigure(line_buffering=True)
 
 ARCHIVE_DIR = "archive"
 CACHE_DIR = "cache"
@@ -25,6 +32,11 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_USER_AGENT = "yeela-license-tracker (github.com/agmonr/yeela-license-tracker)"
 GOVMAP_WFS_URL = "https://open.govmap.gov.il/geoserver/opendata/wfs"
 EARTH_RADIUS_M = 6378137.0  # for lon/lat -> EPSG:3857, which PARCEL_ALL's the_geom is natively stored in
+# Playwright's page-level default (120s) is sized for the portal itself;
+# left on these enrichment calls, one unresponsive government endpoint
+# among hundreds of sequential lookups could stall the whole run for
+# minutes. 20s is generous for what are normally sub-second responses.
+ENRICHMENT_TIMEOUT_MS = 20000
 
 # מנהל התכנון's own planning-plan layer - separate from GovMap. A parcel
 # is usually covered by several plans (a small local one plus large
@@ -194,6 +206,7 @@ async def geocode_parcel(page, city, street):
             NOMINATIM_URL,
             params={"format": "json", "q": address, "countrycodes": "il", "limit": "1"},
             headers={"User-Agent": NOMINATIM_USER_AGENT},
+            timeout=ENRICHMENT_TIMEOUT_MS,
         )
         if geo_resp.status != 200:
             return None, None
@@ -214,6 +227,7 @@ async def geocode_parcel(page, city, street):
                 "propertyName": "GUSH_NUM,PARCEL",
                 "CQL_FILTER": f"INTERSECTS(the_geom,POINT({x} {y}))",
             },
+            timeout=ENRICHMENT_TIMEOUT_MS,
         )
         if wfs_resp.status != 200:
             return None, None
@@ -231,17 +245,18 @@ async def geocode_parcel(page, city, street):
         return None, None
 
 
-async def fill_missing_parcels(page, df, open_license_ids, already_cached):
+async def fill_missing_parcels(page, conn, df, open_license_ids, already_cached):
     """Backfills GUSH_COL/HELKA_COL for currently-open licenses whose
     portal export left them blank, one geocode+WFS lookup per distinct
     (city, street) address rather than per row - many licenses share a
     site. Nominatim's usage policy caps at 1 req/sec, so this is
     deliberately sequential with a sleep between calls; scoping to only
     open licenses (tens of addresses/day, not the ~1,000 missing across
-    the full archive) keeps that bound reasonable. Only successful
-    lookups are cached (see save_parcels_to_cache call site) so a
-    transient failure gets retried on a later run instead of being
-    permanently blank."""
+    the full archive) keeps that bound reasonable. Each successful
+    lookup is cached immediately (not batched until the end) so an
+    interrupted run keeps whatever progress it already made instead of
+    losing it all; a transient failure just gets retried on a later run
+    instead of being permanently blank."""
     missing = df[
         df[LICENSE_COL].isin(open_license_ids)
         & df[GUSH_COL].isna()
@@ -262,8 +277,12 @@ async def fill_missing_parcels(page, df, open_license_ids, already_cached):
     resolved = {}
     for i, (city, street) in enumerate(to_fetch):
         gush, helka = await geocode_parcel(page, city, street)
+        status = f"{gush}/{helka}" if gush is not None else "not found"
+        print(f"  [{i + 1}/{len(to_fetch)}] {street}, {city} -> {status}")
         if gush is not None:
-            resolved[address_key(city, street)] = (gush, helka)
+            key = address_key(city, street)
+            resolved[key] = (gush, helka)
+            save_parcels_to_cache(conn, {key: (gush, helka)})
         if i < len(to_fetch) - 1:
             await asyncio.sleep(1)  # Nominatim usage policy: max 1 req/sec
     print(f"Resolved {len(resolved)}/{len(to_fetch)} addresses.")
@@ -288,6 +307,7 @@ async def lookup_parcel_geometry(page, gush, helka):
                 "outputFormat": "application/json",
                 "CQL_FILTER": f"GUSH_NUM={gush} AND PARCEL={helka}",
             },
+            timeout=ENRICHMENT_TIMEOUT_MS,
         )
         if resp.status != 200:
             return None
@@ -323,6 +343,7 @@ async def lookup_plan(page, gush, helka):
                 "outFields": "pl_number,pl_area_dunam,pl_url",
                 "f": "json",
             },
+            timeout=ENRICHMENT_TIMEOUT_MS,
         )
         if resp.status != 200:
             return None, None
@@ -344,14 +365,16 @@ async def lookup_plan(page, gush, helka):
         return None, None
 
 
-async def fill_plan_links(page, df, open_license_ids, already_cached):
+async def fill_plan_links(page, conn, df, open_license_ids, already_cached):
     """Looks up the building-plan link for every distinct (גוש, חלקה)
     among currently-open licenses that has both fields known (whether
     from the portal export directly or from fill_missing_parcels above)
     and isn't already cached. Scoped to open licenses for the same
     reason as fill_missing_parcels - this is the actionable set, and
     parcel-plan mappings rarely change so the cache carries most of the
-    cost after the first run."""
+    cost after the first run. Each result is cached immediately (see
+    fill_missing_parcels' docstring for why) rather than batched until
+    this whole (potentially long, sequential) loop finishes."""
     open_rows = df[df[LICENSE_COL].isin(open_license_ids) & df[GUSH_COL].notna() & df[HELKA_COL].notna()]
     if open_rows.empty:
         return {}
@@ -367,10 +390,14 @@ async def fill_plan_links(page, df, open_license_ids, already_cached):
 
     print(f"Looking up building plans for {len(to_fetch)} parcels among open licenses...")
     resolved = {}
-    for gush, helka in to_fetch:
+    for i, (gush, helka) in enumerate(to_fetch):
         plan_number, plan_url = await lookup_plan(page, gush, helka)
+        status = plan_number if plan_number is not None else "no plan found"
+        print(f"  [{i + 1}/{len(to_fetch)}] גוש {gush} חלקה {helka} -> {status}")
         if plan_number is not None:
-            resolved[parcel_key(gush, helka)] = (plan_number, plan_url)
+            key = parcel_key(gush, helka)
+            resolved[key] = (plan_number, plan_url)
+            save_plans_to_cache(conn, {key: (plan_number, plan_url)})
     print(f"Resolved {len(resolved)}/{len(to_fetch)} parcels to a plan.")
     return resolved
 
@@ -472,8 +499,7 @@ async def download_full_list():
             print("Backfilling missing גוש/חלקה for open licenses...")
             open_license_ids = set(fresh_reasons.keys())
             cached_parcels = load_cached_parcels(cache_conn)
-            fresh_parcels = await fill_missing_parcels(page, df, open_license_ids, cached_parcels)
-            save_parcels_to_cache(cache_conn, fresh_parcels)
+            fresh_parcels = await fill_missing_parcels(page, cache_conn, df, open_license_ids, cached_parcels)
             all_parcels = {**cached_parcels, **fresh_parcels}
 
             missing_mask = df[GUSH_COL].isna()
@@ -485,8 +511,7 @@ async def download_full_list():
 
             print("Looking up building plans (מנהל התכנון) for open licenses...")
             cached_plans = load_cached_plans(cache_conn)
-            fresh_plans = await fill_plan_links(page, df, open_license_ids, cached_plans)
-            save_plans_to_cache(cache_conn, fresh_plans)
+            fresh_plans = await fill_plan_links(page, cache_conn, df, open_license_ids, cached_plans)
             all_plans = {**cached_plans, **fresh_plans}
             cache_conn.close()
 
