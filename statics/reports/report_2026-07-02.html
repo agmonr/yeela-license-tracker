@@ -30,6 +30,9 @@
     * { box-sizing: border-box; }
     body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--ink); margin: 0; padding: 20px; font-size: 17px; line-height: 1.65; }
     .container { max-width: 1100px; margin: 0 auto; }
+    .portal-bar { text-align: center; margin-bottom: 10px; }
+    .portal-bar a { color: var(--forest-dark); font-size: 13px; font-weight: 500; text-decoration: none; background: #eaf3e6; padding: 6px 16px; border-radius: 999px; display: inline-block; }
+    .portal-bar a:hover { background: var(--leaf-light); }
     header { background: linear-gradient(135deg, var(--forest-dark), var(--forest) 60%, var(--leaf)); color: #fff; padding: 22px 26px; border-radius: 18px; margin-bottom: 25px; box-shadow: 0 8px 20px var(--shadow); }
     header a { color: #eafbe7; font-weight: 500; }
     header a:hover { color: #fff; }
@@ -68,14 +71,15 @@
     .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .export-btn { background: var(--sky); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .export-btn:hover { background: #218cb8; }
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .table-scroll.is-scrollable::before { content: "👉 אפשר להחליק את הטבלה כדי לראות עוד עמודות"; display: none; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); font-size: 15.5px; }
     th { background-color: #eef5ea; color: var(--forest-dark); font-weight: 600; white-space: nowrap; }
     th[onclick] { cursor: pointer; user-select: none; }
     th.sort-asc::after { content: " \25B2"; font-size: 10px; }
     th.sort-desc::after { content: " \25BC"; font-size: 10px; }
-    #cityTable th:nth-child(3), #cityTable td:nth-child(3) { width: 1%; white-space: nowrap; }
+    #cityTable th:nth-child(3), #cityTable td:nth-child(3) { min-width: 120px; white-space: nowrap; }
     .map-icon { text-decoration: none; margin-inline-start: 2px; font-size: 18px; vertical-align: middle; }
     tr:hover { background-color: #f7fbf4; }
     .chart-img { max-width: 100%; height: auto; border-radius: 12px; }
@@ -84,7 +88,7 @@
     .print-btn:hover { background: var(--forest-dark); }
     a { color: var(--sky); }
     @media print {
-        .print-btn { display: none !important; }
+        .print-btn, .portal-bar { display: none !important; }
         body { background: #fff; padding: 0; }
         .card, .panel { box-shadow: none; }
     }
@@ -95,6 +99,10 @@
         .cards { gap: 12px; }
         th, td { padding: 8px; }
         th { white-space: normal; }
+        .table-scroll.is-scrollable::before {
+            display: block; background: var(--sun); color: #3a2a00; font-weight: 600;
+            font-size: 13px; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; text-align: center;
+        }
     }
 
     .container { max-width: 1400px; }
@@ -103,6 +111,7 @@
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
         <h1>🌳 דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
@@ -205,16 +214,26 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-21/07/2026 01:10 מתוך 5 תמונות ארכיון היסטוריות.<br>
+        נוצר אוטומטית ב-21/07/2026 01:30 מתוך 5 תמונות ארכיון היסטוריות.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
 <script>
+
+function markScrollableTables() {
+    document.querySelectorAll('.table-scroll').forEach(el => {
+        el.classList.toggle('is-scrollable', el.scrollWidth > el.clientWidth + 2);
+    });
+}
+markScrollableTables();
+window.addEventListener('resize', markScrollableTables);
+
 function showTrendTab(key) {
     document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('tab-' + key).classList.add('active');
     document.getElementById('btn-' + key).classList.add('active');
+    markScrollableTables();
 }
 </script>
 </body>
