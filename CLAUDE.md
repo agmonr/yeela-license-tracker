@@ -86,6 +86,19 @@ covers the admin email and the dashboard:
    cache of per-date aggregates, extended incrementally so old snapshot
    CSVs don't get re-read on every run). Idempotent.
 
+## Resource use
+
+External calls cost real money/quota or are rate-limited (Nominatim: 1
+req/sec max; mailer sends real emails to real subscribers; matplotlib
+chart rendering across ~20+ archived snapshots is not free). Default to
+the cheapest approach that satisfies the task: regenerate only what
+changed (see `generate_dashboard.py`'s report loop, which rebuilds only
+the latest dated report plus any never-generated one, not every
+historical page on every run) rather than reprocessing everything from
+scratch, and scope enrichment lookups (e.g. the גוש/חלקה geocoding
+backfill in `fetch_data.py`) to the smallest set that's actually
+actionable instead of the full archive.
+
 ## Mail delivery
 
 `mailer.py` builds MIME messages and pipes them to `/usr/sbin/sendmail -t

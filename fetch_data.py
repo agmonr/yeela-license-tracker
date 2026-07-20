@@ -26,6 +26,15 @@ NOMINATIM_USER_AGENT = "yeela-license-tracker (github.com/agmonr/yeela-license-t
 GOVMAP_WFS_URL = "https://open.govmap.gov.il/geoserver/opendata/wfs"
 EARTH_RADIUS_M = 6378137.0  # for lon/lat -> EPSG:3857, which PARCEL_ALL's the_geom is natively stored in
 
+# מנהל התכנון's own planning-plan layer - separate from GovMap. A parcel
+# is usually covered by several plans (a small local one plus large
+# national/metro ones that also happen to intersect it); pl_area_dunam is
+# what makes the small, specific plan findable instead of buried under a
+# 100,000+ dunam תמ"א.
+XPLAN_URL = "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/Xplan/MapServer/1/query"
+PLAN_NUMBER_COL = "מספר תכנית"
+PLAN_URL_COL = "קישור לתכנית"
+
 # The portal's own JSON API behind its UI - discovered by inspecting its
 # network traffic. Needs no real auth (confirmed the ALB cookie it sets on
 # first page load is sufficient even via plain HTTP outside the browser).
@@ -62,6 +71,14 @@ def get_cache_connection():
             address_key TEXT PRIMARY KEY,
             gush TEXT,
             helka TEXT,
+            fetched_date TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS plan_lookups (
+            parcel_key TEXT PRIMARY KEY,
+            plan_number TEXT,
+            plan_url TEXT,
             fetched_date TEXT
         )
     """)
@@ -123,6 +140,44 @@ def lonlat_to_web_mercator(lon, lat):
     x = lon * math.pi / 180 * EARTH_RADIUS_M
     y = math.log(math.tan(math.pi / 4 + lat * math.pi / 360)) * EARTH_RADIUS_M
     return x, y
+
+
+def parcel_key(gush, helka):
+    return f"{gush}|{helka}"
+
+
+def load_cached_plans(conn):
+    rows = conn.execute("SELECT parcel_key, plan_number, plan_url FROM plan_lookups").fetchall()
+    return {key: (number, url) for key, number, url in rows}
+
+
+def save_plans_to_cache(conn, plans):
+    if not plans:
+        return
+    today = date.today().isoformat()
+    conn.executemany(
+        """
+        INSERT INTO plan_lookups (parcel_key, plan_number, plan_url, fetched_date)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(parcel_key) DO UPDATE SET
+            plan_number = excluded.plan_number,
+            plan_url = excluded.plan_url,
+            fetched_date = excluded.fetched_date
+        """,
+        [(key, number, url, today) for key, (number, url) in plans.items()],
+    )
+    conn.commit()
+
+
+def first_point_from_esri_rings(geometry):
+    """Esri/GeoJSON polygon and multipolygon coordinates are arbitrarily
+    nested rings of [x, y] pairs - drill down to the first actual point,
+    which is enough to intersect-query Xplan (any point inside the
+    parcel works; we don't need the full shape)."""
+    coords = geometry["coordinates"]
+    while isinstance(coords[0], list):
+        coords = coords[0]
+    return coords[0], coords[1]
 
 
 async def geocode_parcel(page, city, street):
@@ -212,6 +267,111 @@ async def fill_missing_parcels(page, df, open_license_ids, already_cached):
         if i < len(to_fetch) - 1:
             await asyncio.sleep(1)  # Nominatim usage policy: max 1 req/sec
     print(f"Resolved {len(resolved)}/{len(to_fetch)} addresses.")
+    return resolved
+
+
+async def lookup_parcel_geometry(page, gush, helka):
+    """GUSH_NUM/PARCEL are an exact attribute match against GovMap's
+    cadastre - no geocoding needed here, unlike geocode_parcel above.
+    Compound חלקה values (e.g. "123-16,214", representing several source
+    parcels merged into one license row) don't match any single WFS
+    feature and simply return None - that's an honest "can't resolve
+    this one" rather than a wrong guess."""
+    try:
+        resp = await page.request.get(
+            GOVMAP_WFS_URL,
+            params={
+                "service": "WFS",
+                "version": "2.0.0",
+                "request": "GetFeature",
+                "typeNames": "opendata:PARCEL_ALL",
+                "outputFormat": "application/json",
+                "CQL_FILTER": f"GUSH_NUM={gush} AND PARCEL={helka}",
+            },
+        )
+        if resp.status != 200:
+            return None
+        data = await resp.json()
+        features = data.get("features") or []
+        if not features:
+            return None
+        return features[0]["geometry"]
+    except Exception:
+        return None
+
+
+async def lookup_plan(page, gush, helka):
+    """(gush, helka) -> (plan_number, plan_url) for the smallest (most
+    specific) מנהל התכנון plan covering that parcel - ranked by
+    pl_area_dunam ascending, since a parcel is typically covered by both
+    a small local plan and one or more sprawling national/metro plans
+    (e.g. a תמ"א spanning 100,000+ dunam) that are technically correct
+    but useless as an answer. Returns (None, None) on any failure -
+    missing geometry, no intersecting plans, or a request error."""
+    geometry = await lookup_parcel_geometry(page, gush, helka)
+    if geometry is None:
+        return None, None
+    try:
+        x, y = first_point_from_esri_rings(geometry)
+        resp = await page.request.get(
+            XPLAN_URL,
+            params={
+                "geometry": f"{x},{y}",
+                "geometryType": "esriGeometryPoint",
+                "inSR": "3857",
+                "spatialRel": "esriSpatialRelIntersects",
+                "outFields": "pl_number,pl_area_dunam,pl_url",
+                "f": "json",
+            },
+        )
+        if resp.status != 200:
+            return None, None
+        data = await resp.json()
+        features = data.get("features") or []
+        if not features:
+            return None, None
+        plans = sorted(
+            (f["attributes"] for f in features),
+            key=lambda a: a.get("pl_area_dunam") if a.get("pl_area_dunam") is not None else float("inf"),
+        )
+        best = plans[0]
+        plan_number, plan_url = best.get("pl_number"), best.get("pl_url")
+        if not plan_number or not plan_url:
+            return None, None
+        return str(plan_number), str(plan_url)
+    except Exception as e:
+        print(f"Plan lookup failed for גוש {gush} חלקה {helka} ({e}), skipping.")
+        return None, None
+
+
+async def fill_plan_links(page, df, open_license_ids, already_cached):
+    """Looks up the building-plan link for every distinct (גוש, חלקה)
+    among currently-open licenses that has both fields known (whether
+    from the portal export directly or from fill_missing_parcels above)
+    and isn't already cached. Scoped to open licenses for the same
+    reason as fill_missing_parcels - this is the actionable set, and
+    parcel-plan mappings rarely change so the cache carries most of the
+    cost after the first run."""
+    open_rows = df[df[LICENSE_COL].isin(open_license_ids) & df[GUSH_COL].notna() & df[HELKA_COL].notna()]
+    if open_rows.empty:
+        return {}
+
+    parcels = open_rows[[GUSH_COL, HELKA_COL]].drop_duplicates()
+    to_fetch = [
+        (gush, helka)
+        for gush, helka in parcels.itertuples(index=False)
+        if parcel_key(gush, helka) not in already_cached
+    ]
+    if not to_fetch:
+        return {}
+
+    print(f"Looking up building plans for {len(to_fetch)} parcels among open licenses...")
+    resolved = {}
+    for gush, helka in to_fetch:
+        plan_number, plan_url = await lookup_plan(page, gush, helka)
+        if plan_number is not None:
+            resolved[parcel_key(gush, helka)] = (plan_number, plan_url)
+    print(f"Resolved {len(resolved)}/{len(to_fetch)} parcels to a plan.")
     return resolved
 
 
@@ -315,7 +475,6 @@ async def download_full_list():
             fresh_parcels = await fill_missing_parcels(page, df, open_license_ids, cached_parcels)
             save_parcels_to_cache(cache_conn, fresh_parcels)
             all_parcels = {**cached_parcels, **fresh_parcels}
-            cache_conn.close()
 
             missing_mask = df[GUSH_COL].isna()
             keys = df.loc[missing_mask].apply(lambda r: address_key(r[CITY_COL], r[STREET_COL]), axis=1)
@@ -323,6 +482,20 @@ async def download_full_list():
             df.loc[missing_mask, GUSH_COL] = filled.map(lambda t: t[0])
             df.loc[missing_mask, HELKA_COL] = filled.map(lambda t: t[1])
             print(f"Backfilled {filled.map(lambda t: t[0] is not None).sum()} rows with geocoded גוש/חלקה.")
+
+            print("Looking up building plans (מנהל התכנון) for open licenses...")
+            cached_plans = load_cached_plans(cache_conn)
+            fresh_plans = await fill_plan_links(page, df, open_license_ids, cached_plans)
+            save_plans_to_cache(cache_conn, fresh_plans)
+            all_plans = {**cached_plans, **fresh_plans}
+            cache_conn.close()
+
+            has_parcel_mask = df[GUSH_COL].notna() & df[HELKA_COL].notna()
+            parcel_keys = df.loc[has_parcel_mask].apply(lambda r: parcel_key(r[GUSH_COL], r[HELKA_COL]), axis=1)
+            plan_values = parcel_keys.map(lambda k: all_plans.get(k, (None, None)))
+            df.loc[has_parcel_mask, PLAN_NUMBER_COL] = plan_values.map(lambda t: t[0])
+            df.loc[has_parcel_mask, PLAN_URL_COL] = plan_values.map(lambda t: t[1])
+            print(f"Linked {plan_values.map(lambda t: t[0] is not None).sum()} rows to a building plan.")
 
             dest = os.path.join(ARCHIVE_DIR, f"full_licenses_{date.today().isoformat()}.csv")
             df.to_csv(dest, index=False, encoding='utf-8-sig')

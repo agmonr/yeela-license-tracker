@@ -48,6 +48,8 @@ STREET_COL = "רחוב ומספר בית"
 REASON_COL = "סיבת בקשה"
 GUSH_COL = "גוש"
 HELKA_COL = "חלקה"
+PLAN_NUMBER_COL = "מספר תכנית"
+PLAN_URL_COL = "קישור לתכנית"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -975,6 +977,7 @@ def build_open_objections_report(latest_date, df):
 
     has_reason = REASON_COL in open_df.columns
     has_gush = GUSH_COL in open_df.columns and HELKA_COL in open_df.columns
+    has_plan = PLAN_NUMBER_COL in open_df.columns and PLAN_URL_COL in open_df.columns
     licenses = (
         open_df.groupby(LICENSE_COL)
         .agg(
@@ -988,6 +991,7 @@ def build_open_objections_report(latest_date, df):
             species=(SPECIES_COL, join_species),
             **({"reason": (REASON_COL, "first")} if has_reason else {}),
             **({"gush": (GUSH_COL, "first"), "helka": (HELKA_COL, "first")} if has_gush else {}),
+            **({"plan_number": (PLAN_NUMBER_COL, "first"), "plan_url": (PLAN_URL_COL, "first")} if has_plan else {}),
         )
         .sort_values("days_left", ascending=True, na_position="last")
     )
@@ -1002,11 +1006,18 @@ def build_open_objections_report(latest_date, df):
     if "gush" not in licenses.columns:
         licenses["gush"] = pd.NA
         licenses["helka"] = pd.NA
+    if "plan_number" not in licenses.columns:
+        licenses["plan_number"] = pd.NA
+        licenses["plan_url"] = pd.NA
 
-    def format_gush_helka(gush, helka):
+    def format_gush_helka(gush, helka, plan_number, plan_url):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
-        return f"{gush}/{helka}"
+        label = esc(f"{gush}/{helka}")
+        if pd.notna(plan_url):
+            title = f' title="תוכנית {esc(plan_number)}"' if pd.notna(plan_number) else ""
+            return f'<a href="{esc(plan_url)}" target="_blank" rel="noopener"{title}>{label}</a>'
+        return label
 
     def format_days_left(days):
         if pd.isna(days):
@@ -1052,7 +1063,7 @@ def build_open_objections_report(latest_date, df):
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{maps_link(row.street, row.city)}</td>"
-        f"<td>{esc(format_gush_helka(row.gush, row.helka))}</td>"
+        f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url)}</td>"
         f"<td>{esc(row.reason) if row.reason else '—'}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
@@ -1106,6 +1117,7 @@ def build_open_objections_report(latest_date, df):
     thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
     th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
+    #cityTable th:nth-child(3), #cityTable td:nth-child(3) {{ width: 1%; white-space: nowrap; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
     .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
@@ -1311,18 +1323,20 @@ def main():
     trend = update_trend_cache(snapshots)
 
     latest_date = max(snapshots)
+    latest_df = pd.read_csv(snapshots[latest_date])
     # The index links to every date in the trend cache, so every dated
-    # snapshot needs its own report file or those links 404. Rebuilt every
-    # run (not just missing/latest) so template/style changes propagate to
-    # every historical page instead of only the newest one - these are
-    # regenerated views, not literal point-in-time snapshots.
-    latest_df = None
+    # snapshot needs its own report file or those links 404 - but only the
+    # latest one actually changes day to day, so only it (plus any date
+    # that's never been reported at all, e.g. a backfilled snapshot) gets
+    # rebuilt. Historical report_<date>.html pages are left as-is; if the
+    # template/style changes, those pages simply won't reflect it until
+    # something else regenerates them.
     for date_str, path in snapshots.items():
-        df = pd.read_csv(path)
-        if date_str == latest_date:
-            latest_df = df
-        report_html = build_report(date_str, df, trend.loc[:date_str])
         report_path = REPORTS_DIR / f"report_{date_str}.html"
+        if date_str != latest_date and report_path.exists():
+            continue
+        df = latest_df if date_str == latest_date else pd.read_csv(path)
+        report_html = build_report(date_str, df, trend.loc[:date_str])
         report_path.write_text(report_html, encoding="utf-8")
         print(f"Report written to {report_path}")
 
