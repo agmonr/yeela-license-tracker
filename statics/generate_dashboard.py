@@ -234,10 +234,11 @@ def build_nav_links(latest_date):
     the nav looks the same everywhere instead of each page hand-omitting
     itself in a different order."""
     return (
+        f'<a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; '
         f'<a href="report_{latest_date}.html">הדוח המלא</a> &middot; '
         f'<a href="objections.html">דו"ח היענות הרשות</a> &middot; '
         f'<a href="by_city.html">דוח לפי יישוב</a> &middot; '
-        f'<a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; '
+        f'<a href="orphaned_cities.html">יישובים "יתומים"</a> &middot; '
         f'<a href="index.html">כל הדוחות</a>'
     )
 
@@ -279,10 +280,12 @@ def build_report(latest_date, df, trend):
         tab_panels += f"""<div class="tab-panel{active}" id="tab-{key}">
             <p class="period-note">מאז {period_first}</p>
             {chart_img}
+            <div class="table-scroll">
             <table>
                 <thead><tr><th>תאריך</th><th>סה"כ רישיונות</th><th>שינוי רישיונות</th><th>סה"כ עצים לכריתה</th><th>שינוי עצים לכריתה</th></tr></thead>
                 <tbody>{build_trend_rows(ptrend)}</tbody>
             </table>
+            </div>
         </div>"""
 
     return f"""<!DOCTYPE html>
@@ -315,11 +318,12 @@ def build_report(latest_date, df, trend):
     .card.canceled {{ border-top-color: #d35400; }}
     .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
     .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
-    .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 25px; margin-bottom: 30px; }}
+    .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: 25px; margin-bottom: 30px; }}
     .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
     table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; }}
+    th {{ background-color: #f8f9fa; color: #2c3e50; white-space: nowrap; }}
     tr:hover {{ background-color: #fcfcfc; }}
     .chart-img {{ max-width: 100%; height: auto; border-radius: 8px; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
@@ -361,27 +365,33 @@ def build_report(latest_date, df, trend):
     <div class="grid-2">
         <div class="panel">
             <img class="chart-img" src="{species_chart}" alt="גרף מיני עצים">
+            <div class="table-scroll">
             <table>
                 <thead><tr><th>מין העץ</th><th>סה"כ עצים לכריתה</th></tr></thead>
                 <tbody>{table_rows(top_species.items())}</tbody>
             </table>
+            </div>
         </div>
         <div class="panel">
             <img class="chart-img" src="{cities_chart}" alt="גרף יישובים">
+            <div class="table-scroll">
             <table>
                 <thead><tr><th>ישוב</th><th>סה"כ עצים לכריתה</th></tr></thead>
                 <tbody>{table_rows(top_cities.items())}</tbody>
             </table>
+            </div>
         </div>
     </div>
 
     <div class="panel">
         <h2>סטטוס רישיונות</h2>
         <img class="chart-img" src="{status_chart}" alt="גרף סטטוס רישיונות">
+        <div class="table-scroll">
         <table>
             <thead><tr><th>סטטוס רישיון</th><th>כמות רישיונות</th></tr></thead>
             <tbody>{table_rows(status_counts.items())}</tbody>
         </table>
+        </div>
     </div>
 
     <footer>
@@ -452,6 +462,7 @@ def build_city_report(latest_date, df):
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
     .export-btn:hover {{ background: #2980b9; }}
+    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
@@ -490,6 +501,7 @@ def build_city_report(latest_date, df):
                 <button class="export-btn" onclick="downloadExcel('cityTable', 'by_city_{latest_date}.xls')">הורדה כ-Excel</button>
             </div>
         </div>
+        <div class="table-scroll">
         <table id="cityTable">
             <thead>
                 <tr>
@@ -504,6 +516,7 @@ def build_city_report(latest_date, df):
             </thead>
             <tbody id="cityBody">{rows}</tbody>
         </table>
+        </div>
     </div>
 
     <footer>
@@ -620,6 +633,7 @@ def build_objections_report(latest_date, df):
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
     .export-btn:hover {{ background: #2980b9; }}
+    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
@@ -669,6 +683,7 @@ def build_objections_report(latest_date, df):
                 <button class="export-btn" onclick="downloadExcel('cityTable', 'objections_{latest_date}.xls')">הורדה כ-Excel</button>
             </div>
         </div>
+        <div class="table-scroll">
         <table id="cityTable" data-sort-col="4" data-sort-dir="desc">
             <thead>
                 <tr>
@@ -682,6 +697,193 @@ def build_objections_report(latest_date, df):
             </thead>
             <tbody id="cityBody">{rows}</tbody>
         </table>
+        </div>
+    </div>
+
+    <footer>
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
+</div>
+<script>
+{EXPORT_SCRIPT}
+function sortCities(col, type) {{
+    const table = document.getElementById('cityTable');
+    const tbody = document.getElementById('cityBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const dir = (table.dataset.sortCol == col && table.dataset.sortDir === 'asc') ? 'desc' : 'asc';
+
+    rows.sort((a, b) => {{
+        let va = a.children[col].textContent.trim();
+        let vb = b.children[col].textContent.trim();
+        if (type === 'number') {{
+            va = parseFloat(va.replace(/,/g, '')) || 0;
+            vb = parseFloat(vb.replace(/,/g, '')) || 0;
+            return dir === 'asc' ? va - vb : vb - va;
+        }}
+        return dir === 'asc' ? va.localeCompare(vb, 'he') : vb.localeCompare(va, 'he');
+    }});
+    rows.forEach(r => tbody.appendChild(r));
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = dir;
+    document.querySelectorAll('#cityTable th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    document.querySelector(`#cityTable th[data-col="${{col}}"]`).classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+}}
+
+function filterCities() {{
+    const q = document.getElementById('citySearch').value.trim();
+    const rows = document.querySelectorAll('#cityBody tr');
+    let shown = 0;
+    rows.forEach(r => {{
+        const match = r.children[0].textContent.includes(q);
+        r.style.display = match ? '' : 'none';
+        if (match) shown++;
+    }});
+    document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} ישובים`;
+}}
+filterCities();
+
+function updateStickyOffsets() {{
+    const headerEl = document.querySelector('header');
+    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
+}}
+updateStickyOffsets();
+window.addEventListener('resize', updateStickyOffsets);
+</script>
+</body>
+</html>
+"""
+
+
+def build_orphaned_cities_report(latest_date, df):
+    """Complement of build_objections_report: cities where, as far as
+    license outcomes show, no objection has ever succeeded - zero licenses
+    ever reached CANCELED_STATUS or DENIED_STATUS (the only two outcomes
+    that indicate a blocked cutting; see build_objections_report's caveat
+    that the raw data can't show whether an objection was filed and lost).
+    Restricted to cities with at least one tree ever up for cutting, so
+    cities with no cutting activity at all aren't listed as neglected.
+    Sorted by trees at risk (total cut) descending, to surface where
+    organizing would matter most."""
+    canceled_trees = df[df[STATUS_COL] == CANCELED_STATUS].groupby(CITY_COL)[CUT_COL].sum()
+    denied_trees = df[df[STATUS_COL] == DENIED_STATUS].groupby(CITY_COL)[CUT_COL].sum()
+    total_trees = df.groupby(CITY_COL)[CUT_COL].sum()
+    license_count = df.groupby(CITY_COL).size()
+    open_count = df[df[STATUS_COL] == OPEN_STATUS].groupby(CITY_COL).size()
+
+    city_stats = pd.DataFrame({
+        "canceled": canceled_trees,
+        "denied": denied_trees,
+        "total": total_trees,
+        "licenses": license_count,
+        "open": open_count,
+    }).fillna(0).astype(int)
+    city_stats["saved"] = city_stats["canceled"] + city_stats["denied"]
+    city_stats = city_stats[(city_stats["saved"] == 0) & (city_stats["total"] > 0)]
+    city_stats = city_stats.sort_values("total", ascending=False)
+
+    rows = "".join(
+        f"<tr><td>{esc(city)}</td>"
+        f"<td>{int(row.licenses):,}</td>"
+        f"<td>{int(row.total):,}</td>"
+        f"<td>{int(row.open):,}</td></tr>"
+        for city, row in city_stats.iterrows()
+    )
+
+    n_cities = len(city_stats)
+    n_trees = int(city_stats["total"].sum())
+
+    return f"""<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>יישובים "יתומים" - ללא השגה שהצליחה ({latest_date})</title>
+<style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
+    .container {{ max-width: 900px; margin: 0 auto; }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
+    header a {{ color: #ecf0f1; }}
+    h1 {{ margin: 0; font-size: 24px; }}
+    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
+    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
+    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
+    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
+    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
+    .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e74c3c; }}
+    .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
+    .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
+    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
+    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
+    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
+    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
+    .export-btn:hover {{ background: #2980b9; }}
+    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
+    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
+    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
+    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
+    tr:hover {{ background-color: #fcfcfc; }}
+    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
+    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
+    .print-btn:hover {{ background: #219150; }}
+    @media print {{
+        .print-btn, .toolbar {{ display: none !important; }}
+        body {{ background: #fff; padding: 0; }}
+        header {{ position: static; box-shadow: none; }}
+        .panel {{ box-shadow: none; }}
+        thead th {{ position: static; box-shadow: none; }}
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>יישובים "יתומים" - ללא השגה שהצליחה</h1>
+        <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
+        <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
+        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
+    </header>
+
+    <div class="panel explain">
+        <h2>מה מציג הדוח</h2>
+        <p>הדוח מציג יישובים שבהם, למרות שהוגשו בהם בקשות לכריתת עצים, <strong>אף רישיון מעולם לא הגיע לסטטוס "{CANCELED_STATUS}" או "{DENIED_STATUS}"</strong> &ndash; כלומר, ככל הידוע מהנתונים הגלויים, אף עץ ביישוב לא ניצל בעקבות השגה או דחייה. אלו יישובים שנראה כי אין בהם כרגע מי שעוקב ומגיש השגות, ולכן העצים בהם "יתומים".</p>
+        <p>לתשומת לב: היעדר עצים שניצלו אינו הוכחה חד-משמעית שאף אחד מעולם לא הגיש השגה ביישוב &ndash; ייתכן שהוגשו השגות שנדחו, ואין דרך לדעת זאת מתוך הנתונים הגלויים לציבור (ר' גם ההסבר <a href="objections.html">בדו"ח היענות הרשות</a>). זהו אינדיקטור, לא קביעה סופית.</p>
+        <p class="note">מיון ברירת מחדל: סה"כ עצים לכריתה ביישוב (מהגדול לקטן), כדי להעלות קודם את היישובים שבהם ההיעדרות משמעותית ביותר.</p>
+    </div>
+
+    <div class="cards">
+        <div class="card"><div class="card-val">{n_cities:,}</div><div class="card-lbl">יישובים יתומים</div></div>
+        <div class="card"><div class="card-val">{n_trees:,}</div><div class="card-lbl">עצים לכריתה ביישובים אלו</div></div>
+    </div>
+
+    <div class="panel">
+        <div class="toolbar">
+            <input type="text" id="citySearch" placeholder="חיפוש יישוב..." oninput="filterCities()">
+            <span id="cityCount"></span>
+            <div class="toolbar-actions">
+                <button class="export-btn" onclick="downloadCSV('cityTable', 'orphaned_cities_{latest_date}.csv')">הורדה כ-CSV</button>
+                <button class="export-btn" onclick="downloadExcel('cityTable', 'orphaned_cities_{latest_date}.xls')">הורדה כ-Excel</button>
+            </div>
+        </div>
+        <div class="table-scroll">
+        <table id="cityTable" data-sort-col="2" data-sort-dir="desc">
+            <thead>
+                <tr>
+                    <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
+                    <th data-col="1" onclick="sortCities(1, 'number')">סה"כ רישיונות</th>
+                    <th data-col="2" class="sort-desc" onclick="sortCities(2, 'number')">סה"כ עצים לכריתה</th>
+                    <th data-col="3" onclick="sortCities(3, 'number')">רישיונות פתוחים כרגע להשגה</th>
+                </tr>
+            </thead>
+            <tbody id="cityBody">{rows}</tbody>
+        </table>
+        </div>
     </div>
 
     <footer>
@@ -823,7 +1025,7 @@ def build_open_objections_report(latest_date, df):
             row.species,
             row.applicant,
             row.reason,
-            "אתה פעיל סביבתי מנוסה, כתוב מפורט ככול האפשר",
+            "אתה משפטן מדוייק המתבסס תמיד על מקורות מידע אמינים כסלע, אתה תדגיש חוקים ותקנות אותם הבקשה מפרה לכאורה",
         ]
         clean_terms = [str(t).strip() for t in terms if pd.notna(t) and str(t).strip()]
         query = quote_plus(" ".join(clean_terms))
@@ -861,7 +1063,7 @@ def build_open_objections_report(latest_date, df):
 <style>
     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
     .container {{ max-width: 1100px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
+    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
     header a {{ color: #ecf0f1; }}
     h1 {{ margin: 0; font-size: 24px; }}
     .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
@@ -879,10 +1081,11 @@ def build_open_objections_report(latest_date, df):
     .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
     .export-btn:hover {{ background: #2980b9; }}
+    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
     th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
+    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
     th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     tr:hover {{ background-color: #fcfcfc; }}
@@ -892,7 +1095,6 @@ def build_open_objections_report(latest_date, df):
     @media print {{
         .print-btn, .toolbar {{ display: none !important; }}
         body {{ background: #fff; padding: 0; }}
-        header {{ position: static; box-shadow: none; }}
         .panel {{ box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
@@ -938,6 +1140,7 @@ def build_open_objections_report(latest_date, df):
                 <button class="export-btn" onclick="downloadExcel('cityTable', 'open_for_objection_{latest_date}.xls')">הורדה כ-Excel</button>
             </div>
         </div>
+        <div class="table-scroll">
         <table id="cityTable" data-sort-col="7" data-sort-dir="asc">
             <thead>
                 <tr>
@@ -954,6 +1157,7 @@ def build_open_objections_report(latest_date, df):
             </thead>
             <tbody id="cityBody">{rows}</tbody>
         </table>
+        </div>
     </div>
 
     <footer>
@@ -1007,13 +1211,6 @@ function filterCities() {{
     document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} רישיונות`;
 }}
 filterCities();
-
-function updateStickyOffsets() {{
-    const headerEl = document.querySelector('header');
-    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
-}}
-updateStickyOffsets();
-window.addEventListener('resize', updateStickyOffsets);
 </script>
 </body>
 </html>
@@ -1043,10 +1240,11 @@ def build_index(trend):
 <div class="container">
     <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
     <p>האתר בהרצה, עלולות להיות טעויות</p>
+    <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
     <p><a href="current.html">הדוח האחרון</a></p>
     <p><a href="objections.html">דו"ח היענות הרשות</a></p>
     <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
-    <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
+    <p><a href="orphaned_cities.html">יישובים "יתומים" - ללא השגה שהצליחה</a></p>
     <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
     <ul>{rows}</ul>
 </div>
@@ -1058,9 +1256,10 @@ def build_index(trend):
 def build_ai_index(snapshots):
     lines = [
         f"{BASE_URL}index.html",
+        f"{BASE_URL}open_for_objection.html",
         f"{BASE_URL}by_city.html",
         f"{BASE_URL}objections.html",
-        f"{BASE_URL}open_for_objection.html",
+        f"{BASE_URL}orphaned_cities.html",
     ]
     lines += [f"{BASE_URL}report_{date_str}.html" for date_str in sorted(snapshots)]
     return "\n".join(lines) + "\n"
@@ -1127,6 +1326,10 @@ def main():
     open_objections_report_path = REPORTS_DIR / "open_for_objection.html"
     open_objections_report_path.write_text(build_open_objections_report(latest_date, latest_df), encoding="utf-8")
     print(f"Open-for-objection report written to {open_objections_report_path}")
+
+    orphaned_cities_report_path = REPORTS_DIR / "orphaned_cities.html"
+    orphaned_cities_report_path.write_text(build_orphaned_cities_report(latest_date, latest_df), encoding="utf-8")
+    print(f"Orphaned-cities report written to {orphaned_cities_report_path}")
 
     ai_index_path = REPORTS_DIR / "llms.txt"
     ai_index_path.write_text(build_ai_index(snapshots), encoding="utf-8")
