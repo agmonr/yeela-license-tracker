@@ -1054,11 +1054,17 @@ def build_open_objections_report(latest_date, df):
         street = str(street).strip() if pd.notna(street) else ""
         address = f"{street}, {city}" if street else city
         query = quote_plus(f"{address}, ישראל")
-        url = f"https://www.google.com/maps/search/?api=1&query={query}"
-        html = f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
+        google_url = f"https://www.google.com/maps/search/?api=1&query={query}"
+        icons = (
+            f'<a href="{google_url}" target="_blank" rel="noopener" '
+            f'class="map-icon" title="פתח ב-Google Maps">🗺️</a>'
+        )
         if pd.notna(govmap_url):
-            html += f' &middot; <a href="{esc(govmap_url)}" target="_blank" rel="noopener">GovMap</a>'
-        return html
+            icons += (
+                f' <a href="{esc(govmap_url)}" target="_blank" rel="noopener" '
+                f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
+            )
+        return f'{esc(address)} {icons}'
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1148,6 +1154,7 @@ def build_open_objections_report(latest_date, df):
     th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     #cityTable th:nth-child(3), #cityTable td:nth-child(3) {{ width: 1%; white-space: nowrap; }}
+    .map-icon {{ text-decoration: none; margin-inline-start: 2px; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
     .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
