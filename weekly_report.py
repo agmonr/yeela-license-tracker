@@ -150,7 +150,7 @@ def send_weekly_report(diff_df):
 
     attachments = []
     if diff_df is not None and not diff_df.empty:
-        diff_filename = f"weekly_diff_{datetime.now().strftime('%Y%m%d')}.csv"
+        diff_filename = os.path.join("archive", f"weekly_diff_{datetime.now().strftime('%Y%m%d')}.csv")
         diff_df.to_csv(diff_filename, index=False, encoding='utf-8-sig')
         attachments.append(diff_filename)
 

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import math
 import os
 import sqlite3
 from datetime import date
@@ -12,6 +13,18 @@ CACHE_DB_PATH = os.path.join(CACHE_DIR, "yeela_license_details.db")
 
 LICENSE_COL = "מספר רישיון"
 REQUEST_REASON_COL = "סיבת בקשה"
+CITY_COL = "ישוב"
+STREET_COL = "רחוב ומספר בית"
+GUSH_COL = "גוש"
+HELKA_COL = "חלקה"
+
+# Only ~83% of exported rows carry גוש/חלקה from the portal itself - the
+# rest are backfilled below via address geocoding, scoped to currently-open
+# licenses only (the actionable set an objector needs the parcel for).
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_USER_AGENT = "yeela-license-tracker (github.com/agmonr/yeela-license-tracker)"
+GOVMAP_WFS_URL = "https://open.govmap.gov.il/geoserver/opendata/wfs"
+EARTH_RADIUS_M = 6378137.0  # for lon/lat -> EPSG:3857, which PARCEL_ALL's the_geom is natively stored in
 
 # The portal's own JSON API behind its UI - discovered by inspecting its
 # network traffic. Needs no real auth (confirmed the ALB cookie it sets on
@@ -44,6 +57,14 @@ def get_cache_connection():
             fetched_date TEXT
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS parcel_lookups (
+            address_key TEXT PRIMARY KEY,
+            gush TEXT,
+            helka TEXT,
+            fetched_date TEXT
+        )
+    """)
     return conn
 
 
@@ -67,6 +88,131 @@ def save_reasons_to_cache(conn, reasons):
         [(license_id, reason, today) for license_id, reason in reasons.items()],
     )
     conn.commit()
+
+
+def address_key(city, street):
+    city = str(city).strip() if pd.notna(city) else ""
+    street = str(street).strip() if pd.notna(street) else ""
+    return f"{city}|{street}"
+
+
+def load_cached_parcels(conn):
+    rows = conn.execute("SELECT address_key, gush, helka FROM parcel_lookups").fetchall()
+    return {key: (gush, helka) for key, gush, helka in rows}
+
+
+def save_parcels_to_cache(conn, parcels):
+    if not parcels:
+        return
+    today = date.today().isoformat()
+    conn.executemany(
+        """
+        INSERT INTO parcel_lookups (address_key, gush, helka, fetched_date)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(address_key) DO UPDATE SET
+            gush = excluded.gush,
+            helka = excluded.helka,
+            fetched_date = excluded.fetched_date
+        """,
+        [(key, gush, helka, today) for key, (gush, helka) in parcels.items()],
+    )
+    conn.commit()
+
+
+def lonlat_to_web_mercator(lon, lat):
+    x = lon * math.pi / 180 * EARTH_RADIUS_M
+    y = math.log(math.tan(math.pi / 4 + lat * math.pi / 360)) * EARTH_RADIUS_M
+    return x, y
+
+
+async def geocode_parcel(page, city, street):
+    """address -> (gush, helka) via OSM Nominatim geocoding, then a GovMap
+    WFS point-intersection query against the PARCEL_ALL cadastre layer
+    (native CRS EPSG:3857 - lon/lat degrees silently return zero features,
+    hence the reprojection). Returns (None, None) on any failure (no
+    geocode match, either API erroring, unexpected shape) rather than
+    raising - this enrichment is best-effort and must never block the
+    primary snapshot."""
+    address = f"{street}, {city}, ישראל" if street else f"{city}, ישראל"
+    try:
+        geo_resp = await page.request.get(
+            NOMINATIM_URL,
+            params={"format": "json", "q": address, "countrycodes": "il", "limit": "1"},
+            headers={"User-Agent": NOMINATIM_USER_AGENT},
+        )
+        if geo_resp.status != 200:
+            return None, None
+        geo_results = await geo_resp.json()
+        if not geo_results:
+            return None, None
+        lat, lon = float(geo_results[0]["lat"]), float(geo_results[0]["lon"])
+
+        x, y = lonlat_to_web_mercator(lon, lat)
+        wfs_resp = await page.request.get(
+            GOVMAP_WFS_URL,
+            params={
+                "service": "WFS",
+                "version": "2.0.0",
+                "request": "GetFeature",
+                "typeNames": "opendata:PARCEL_ALL",
+                "outputFormat": "application/json",
+                "propertyName": "GUSH_NUM,PARCEL",
+                "CQL_FILTER": f"INTERSECTS(the_geom,POINT({x} {y}))",
+            },
+        )
+        if wfs_resp.status != 200:
+            return None, None
+        wfs_data = await wfs_resp.json()
+        features = wfs_data.get("features") or []
+        if not features:
+            return None, None
+        props = features[0]["properties"]
+        gush, helka = props.get("GUSH_NUM"), props.get("PARCEL")
+        if gush is None or helka is None:
+            return None, None
+        return str(gush), str(helka)
+    except Exception as e:
+        print(f"Parcel lookup failed for '{address}' ({e}), skipping.")
+        return None, None
+
+
+async def fill_missing_parcels(page, df, open_license_ids, already_cached):
+    """Backfills GUSH_COL/HELKA_COL for currently-open licenses whose
+    portal export left them blank, one geocode+WFS lookup per distinct
+    (city, street) address rather than per row - many licenses share a
+    site. Nominatim's usage policy caps at 1 req/sec, so this is
+    deliberately sequential with a sleep between calls; scoping to only
+    open licenses (tens of addresses/day, not the ~1,000 missing across
+    the full archive) keeps that bound reasonable. Only successful
+    lookups are cached (see save_parcels_to_cache call site) so a
+    transient failure gets retried on a later run instead of being
+    permanently blank."""
+    missing = df[
+        df[LICENSE_COL].isin(open_license_ids)
+        & df[GUSH_COL].isna()
+    ]
+    if missing.empty:
+        return {}
+
+    addresses = missing[[CITY_COL, STREET_COL]].drop_duplicates()
+    to_fetch = [
+        (city, street)
+        for city, street in addresses.itertuples(index=False)
+        if address_key(city, street) not in already_cached
+    ]
+    if not to_fetch:
+        return {}
+
+    print(f"Looking up גוש/חלקה for {len(to_fetch)} addresses missing it among open licenses...")
+    resolved = {}
+    for i, (city, street) in enumerate(to_fetch):
+        gush, helka = await geocode_parcel(page, city, street)
+        if gush is not None:
+            resolved[address_key(city, street)] = (gush, helka)
+        if i < len(to_fetch) - 1:
+            await asyncio.sleep(1)  # Nominatim usage policy: max 1 req/sec
+    print(f"Resolved {len(resolved)}/{len(to_fetch)} addresses.")
+    return resolved
 
 
 async def fetch_open_license_reasons(page, already_cached):
@@ -157,12 +303,26 @@ async def download_full_list():
             fresh_reasons = await fetch_open_license_reasons(page, cached_reasons)
             save_reasons_to_cache(cache_conn, fresh_reasons)
             all_reasons = {**cached_reasons, **fresh_reasons}
-            cache_conn.close()
 
             df[REQUEST_REASON_COL] = df[LICENSE_COL].map(
                 lambda lic: all_reasons.get(int(lic)) if pd.notna(lic) else None
             )
             print(f"Enriched {df[REQUEST_REASON_COL].notna().sum()} rows with request reasons ({len(all_reasons)} total cached).")
+
+            print("Backfilling missing גוש/חלקה for open licenses...")
+            open_license_ids = set(fresh_reasons.keys())
+            cached_parcels = load_cached_parcels(cache_conn)
+            fresh_parcels = await fill_missing_parcels(page, df, open_license_ids, cached_parcels)
+            save_parcels_to_cache(cache_conn, fresh_parcels)
+            all_parcels = {**cached_parcels, **fresh_parcels}
+            cache_conn.close()
+
+            missing_mask = df[GUSH_COL].isna()
+            keys = df.loc[missing_mask].apply(lambda r: address_key(r[CITY_COL], r[STREET_COL]), axis=1)
+            filled = keys.map(lambda k: all_parcels.get(k, (None, None)))
+            df.loc[missing_mask, GUSH_COL] = filled.map(lambda t: t[0])
+            df.loc[missing_mask, HELKA_COL] = filled.map(lambda t: t[1])
+            print(f"Backfilled {filled.map(lambda t: t[0] is not None).sum()} rows with geocoded גוש/חלקה.")
 
             dest = os.path.join(ARCHIVE_DIR, f"full_licenses_{date.today().isoformat()}.csv")
             df.to_csv(dest, index=False, encoding='utf-8-sig')

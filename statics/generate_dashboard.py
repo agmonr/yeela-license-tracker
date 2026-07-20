@@ -11,6 +11,7 @@ pruned, so a report built from them wouldn't be reproducible from the
 repo alone.
 """
 import base64
+import configparser
 import re
 from datetime import datetime, timezone
 from io import BytesIO
@@ -27,6 +28,7 @@ ARCHIVE_DIR = REPO_ROOT / "archive"
 REPORTS_DIR = REPO_ROOT / "statics" / "reports"
 TREND_CACHE = REPORTS_DIR / "trend_data.csv"
 BASE_URL = "https://agmonr.github.io/yeela-license-tracker/statics/reports/"
+CONFIG_PATH = REPO_ROOT / "config.ini"
 
 DATE_RE = re.compile(r"^full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
 
@@ -1014,20 +1016,21 @@ def build_open_objections_report(latest_date, df):
         url = f"https://www.google.com/maps/search/?api=1&query={query}"
         return f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
 
+    config = configparser.ConfigParser()
+    config.read(CONFIG_PATH, encoding="utf-8")
+    prompt_lines = [line.strip() for line in config["objection_help"]["prompt"].splitlines() if line.strip()]
+
     def objection_help_link(license_id, row):
         street = str(row.street).strip() if pd.notna(row.street) else ""
-        terms = [
-            "כיצד לכתוב התנגדות לרישיון הכריתה הזה",
-            "חפש ממקורות גלויים התנגדויות דומות והשלם בהתאם",
+        data_lines = [
             f"רישיון כריתה מספר {int(license_id)}",
-            row.city,
+            row.city if pd.notna(row.city) else "",
             street,
-            row.species,
-            row.applicant,
-            row.reason,
-            "אתה משפטן מדוייק המתבסס תמיד על מקורות מידע אמינים כסלע, אתה תדגיש חוקים ותקנות אותם הבקשה מפרה לכאורה",
+            row.species if pd.notna(row.species) else "",
+            row.applicant if pd.notna(row.applicant) else "",
+            row.reason if pd.notna(row.reason) else "",
         ]
-        clean_terms = [str(t).strip() for t in terms if pd.notna(t) and str(t).strip()]
+        clean_terms = prompt_lines + [str(t).strip() for t in data_lines if str(t).strip()]
         query = quote_plus(" ".join(clean_terms))
         url = f"https://www.google.com/search?q={query}"
         return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
