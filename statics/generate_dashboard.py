@@ -1103,6 +1103,8 @@ def build_open_objections_report(latest_date, df):
     .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
     .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
     .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
+    .explain-header {{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }}
+    .created-at {{ color: #95a5a6; font-size: 12px; white-space: nowrap; }}
     .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
     .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
     .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e67e22; }}
@@ -1146,7 +1148,10 @@ def build_open_objections_report(latest_date, df):
     </header>
 
     <div class="panel explain">
-        <h2>איך משתמשים בקישורים בטבלה</h2>
+        <div class="explain-header">
+            <h2>איך משתמשים בקישורים בטבלה</h2>
+            <span class="created-at">נוצר ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}</span>
+        </div>
         <p>לחיצה על <strong>מספר הרישיון</strong> תפתח חיפוש בגוגל. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם. לחיצה על <strong>הכתובת</strong> תפתח את המיקום ב-Google Maps, כדי שתוכלו לראות את המקום בפועל.</p>
     </div>
 
