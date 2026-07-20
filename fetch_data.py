@@ -35,8 +35,11 @@ EARTH_RADIUS_M = 6378137.0  # for lon/lat -> EPSG:3857, which PARCEL_ALL's the_g
 # Playwright's page-level default (120s) is sized for the portal itself;
 # left on these enrichment calls, one unresponsive government endpoint
 # among hundreds of sequential lookups could stall the whole run for
-# minutes. 20s is generous for what are normally sub-second responses.
-ENRICHMENT_TIMEOUT_MS = 20000
+# minutes. GovMap's WFS in particular has been observed taking 10-20s on
+# an otherwise-healthy request (verified live: 14.3s and 9.7s round trips
+# for the same parcel back to back), so this needs real headroom above
+# that rather than assuming sub-second responses.
+ENRICHMENT_TIMEOUT_MS = 45000
 
 # מנהל התכנון's own planning-plan layer - separate from GovMap. A parcel
 # is usually covered by several plans (a small local one plus large
@@ -316,7 +319,8 @@ async def lookup_parcel_geometry(page, gush, helka):
         if not features:
             return None
         return features[0]["geometry"]
-    except Exception:
+    except Exception as e:
+        print(f"Parcel geometry lookup failed for גוש {gush} חלקה {helka} ({e}), skipping.")
         return None
 
 
@@ -374,7 +378,13 @@ async def fill_plan_links(page, conn, df, open_license_ids, already_cached):
     parcel-plan mappings rarely change so the cache carries most of the
     cost after the first run. Each result is cached immediately (see
     fill_missing_parcels' docstring for why) rather than batched until
-    this whole (potentially long, sequential) loop finishes."""
+    this whole (potentially long, sequential) loop finishes.
+
+    Deliberately sequential, not concurrent: GovMap's WFS has been
+    observed taking 10-20s per request even one at a time (see
+    ENRICHMENT_TIMEOUT_MS), suggesting the server itself is the
+    bottleneck right now - adding concurrent load on top of that is
+    more likely to cause more timeouts than to finish faster."""
     open_rows = df[df[LICENSE_COL].isin(open_license_ids) & df[GUSH_COL].notna() & df[HELKA_COL].notna()]
     if open_rows.empty:
         return {}
