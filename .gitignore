@@ -27,3 +27,6 @@ sheet_export.csv
 
 # local Claude Code permission settings
 .claude/settings.local.json
+
+# saved Claude Code session transcripts
+.claude-sessions/

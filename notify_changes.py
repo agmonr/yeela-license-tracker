@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 from sheet_subscribers import get_subscribers
 from mailer import send_html_mail
+from config import ADMIN_EMAILS
 
 DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
 REPORT_RE = re.compile(r"report_(\d{4}-\d{2}-\d{2})\.html$")
@@ -68,14 +69,66 @@ def get_diff():
     
     return all_changes
 
+def send_admin_summary(sent):
+    """Emails ADMIN_EMAILS a brief recap of the per-city mails sent today."""
+    if sent:
+        rows = "".join(
+            f"<tr><td>{email}</td><td>{city_key}</td><td>{count}</td></tr>"
+            for email, city_key, count in sent
+        )
+        body_note = f"<p>נשלחו <strong>{len(sent)}</strong> מיילים היום.</p>"
+        table_html = f"""
+        <table>
+            <tr><th>נמען</th><th>ישוב</th><th>מספר שינויים</th></tr>
+            {rows}
+        </table>
+        """
+    else:
+        body_note = "<p>לא נשלחו מיילים היום (לא נמצאו שינויים רלוונטיים למנויים).</p>"
+        table_html = ""
+
+    html_body = f"""
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<style>
+    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f4f7f6; padding: 20px; }}
+    .container {{ background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+    h2 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; }}
+    th, td {{ border: 1px solid #e0e0e0; padding: 10px 8px; text-align: right; }}
+    th {{ background-color: #3498db; color: white; white-space: nowrap; }}
+    tr:nth-child(even) {{ background-color: #f2f2f2; }}
+    .footer {{ margin-top: 30px; font-size: 12px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px; }}
+</style>
+</head>
+<body>
+    <div class="container">
+        <h2>סיכום מיילים יומי - רישיונות כריתה</h2>
+        {body_note}
+        {table_html}
+        <div class="footer">
+            הודעה זו נשלחה באופן אוטומטי על ידי בוט מעקב רישיונות כריתה.<br>
+            תאריך הפקה: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        </div>
+    </div>
+</body>
+</html>
+"""
+    send_html_mail(ADMIN_EMAILS, "סיכום מיילים יומי - רישיונות כריתה", html_body)
+
+
 def send_notifications(diff_df):
     if diff_df is None or diff_df.empty:
         print("No changes detected.")
+        send_admin_summary([])
         return
 
     subscribers = get_subscribers()
     if not subscribers:
         print("Error: could not load subscribers from Google Sheet.")
+        send_admin_summary([])
         return
 
     print(f"Found {len(diff_df)} total row changes. Checking against {len(subscribers)} subscriber(s)...")
@@ -156,6 +209,8 @@ def send_notifications(diff_df):
 
         if i < len(to_send) - 1:
             time.sleep(1800)  # 30 min between sends to avoid Gmail rate-limiting/blocking
+
+    send_admin_summary([(email, city_key, len(city_diff)) for email, city_key, city_diff in to_send])
 
 if __name__ == "__main__":
     diff = get_diff()
