@@ -72,10 +72,10 @@
     <div class="panel explain">
         <div class="explain-header">
             <h2>הנחיה ל-AI לעזרה בכתיבת השגה</h2>
-            <span class="created-at">נוצר ב-20/07/2026 23:16</span>
+            <span class="created-at">נוצר ב-20/07/2026 23:26</span>
         </div>
         <p class="note">זו ההנחיה שנשלחת יחד עם פרטי הרישיון כשלוחצים על מספר הרישיון או על סיבת הבקשה בטבלה למטה. אפשר לערוך אותה כאן - השינוי ישפיע מיד על כל הקישורים בטבלה, כל עוד הדף פתוח (העריכה לא נשמרת אחרי רענון הדף).</p>
-        <textarea id="aiPromptField" class="ai-prompt-field" dir="rtl" rows="4">הנחה כתיבה של השגה על רישיון שניתן לכריתת עצים, ההנחיה צריכה לכלול את הנקודות שיכלות
+        <textarea id="aiPromptField" class="ai-prompt-field" dir="rtl" rows="4">הנחה כתיבה של השגה על רישיון שניתן לכריתת עצים, ההנחיה צריכה לכלול את הנקודת שעשויות
 להיות רלוונטיות עם בקשה מהמשתמש לוודא ולספק לנקודות החשובות והאפקטיביות בלבד סימוכין</textarea>
         <button class="export-btn" onclick="resetAiPrompt()">איפוס לברירת מחדל</button>
     </div>
@@ -134,7 +134,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-20/07/2026 23:16.<br>
+        נוצר אוטומטית ב-20/07/2026 23:26.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
@@ -190,7 +190,7 @@ function downloadExcel(tableId, filename) {
     triggerDownload(blob, filename);
 }
 
-const DEFAULT_AI_PROMPT = "הנחה כתיבה של השגה על רישיון שניתן לכריתת עצים, ההנחיה צריכה לכלול את הנקודות שיכלות\nלהיות רלוונטיות עם בקשה מהמשתמש לוודא ולספק לנקודות החשובות והאפקטיביות בלבד סימוכין";
+const DEFAULT_AI_PROMPT = "הנחה כתיבה של השגה על רישיון שניתן לכריתת עצים, ההנחיה צריכה לכלול את הנקודת שעשויות\nלהיות רלוונטיות עם בקשה מהמשתמש לוודא ולספק לנקודות החשובות והאפקטיביות בלבד סימוכין";
 
 function resetAiPrompt() {
     document.getElementById('aiPromptField').value = DEFAULT_AI_PROMPT;
