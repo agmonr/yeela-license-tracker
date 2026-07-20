@@ -1015,17 +1015,25 @@ def build_open_objections_report(latest_date, df):
     if "govmap_url" not in licenses.columns:
         licenses["govmap_url"] = pd.NA
 
-    def format_gush_helka(gush, helka, plan_number, plan_url):
+    def is_construction_reason(reason):
+        text = str(reason) if pd.notna(reason) else ""
+        return "בנייה" in text or "ופיתוח" in text
+
+    def format_gush_helka(gush, helka, plan_number, plan_url, reason):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
         full_text = f"{gush}/{helka}"
         truncated = len(full_text) > 20
         label = esc(full_text[:20] + "…") if truncated else esc(full_text)
+        # מידע תכנוני (the plan link) only makes sense when the request
+        # itself is for בנייה/פיתוח - a safety/disease/infrastructure
+        # felling reason has no planning angle worth surfacing here.
+        show_plan = pd.notna(plan_url) and is_construction_reason(reason)
         title_parts = [full_text] if truncated else []
-        if pd.notna(plan_number):
+        if show_plan and pd.notna(plan_number):
             title_parts.append(f"תוכנית {plan_number}")
         title = f' title="{esc(" · ".join(title_parts))}"' if title_parts else ""
-        if pd.notna(plan_url):
+        if show_plan:
             return f'<a href="{esc(plan_url)}" target="_blank" rel="noopener"{title}>{label}</a>'
         return f'<span{title}>{label}</span>' if title else label
 
@@ -1083,7 +1091,7 @@ def build_open_objections_report(latest_date, df):
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{maps_link(row.street, row.city, row.govmap_url)}</td>"
-        f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url)}</td>"
+        f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>"
         f"<td>{reason_search_link(license_id, row)}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
