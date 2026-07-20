@@ -1154,7 +1154,7 @@ def build_open_objections_report(latest_date, df):
     th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     #cityTable th:nth-child(3), #cityTable td:nth-child(3) {{ width: 1%; white-space: nowrap; }}
-    .map-icon {{ text-decoration: none; margin-inline-start: 2px; }}
+    .map-icon {{ text-decoration: none; margin-inline-start: 2px; font-size: 18px; vertical-align: middle; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
     .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
