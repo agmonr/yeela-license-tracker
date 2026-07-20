@@ -50,6 +50,7 @@ GUSH_COL = "גוש"
 HELKA_COL = "חלקה"
 PLAN_NUMBER_COL = "מספר תכנית"
 PLAN_URL_COL = "קישור לתכנית"
+GOVMAP_URL_COL = "קישור ל-GovMap"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -978,6 +979,7 @@ def build_open_objections_report(latest_date, df):
     has_reason = REASON_COL in open_df.columns
     has_gush = GUSH_COL in open_df.columns and HELKA_COL in open_df.columns
     has_plan = PLAN_NUMBER_COL in open_df.columns and PLAN_URL_COL in open_df.columns
+    has_govmap = GOVMAP_URL_COL in open_df.columns
     licenses = (
         open_df.groupby(LICENSE_COL)
         .agg(
@@ -992,6 +994,7 @@ def build_open_objections_report(latest_date, df):
             **({"reason": (REASON_COL, "first")} if has_reason else {}),
             **({"gush": (GUSH_COL, "first"), "helka": (HELKA_COL, "first")} if has_gush else {}),
             **({"plan_number": (PLAN_NUMBER_COL, "first"), "plan_url": (PLAN_URL_COL, "first")} if has_plan else {}),
+            **({"govmap_url": (GOVMAP_URL_COL, "first")} if has_govmap else {}),
         )
         .sort_values("days_left", ascending=True, na_position="last")
     )
@@ -1009,6 +1012,8 @@ def build_open_objections_report(latest_date, df):
     if "plan_number" not in licenses.columns:
         licenses["plan_number"] = pd.NA
         licenses["plan_url"] = pd.NA
+    if "govmap_url" not in licenses.columns:
+        licenses["govmap_url"] = pd.NA
 
     def format_gush_helka(gush, helka, plan_number, plan_url):
         if pd.isna(gush) or pd.isna(helka):
@@ -1037,12 +1042,15 @@ def build_open_objections_report(latest_date, df):
     def iso_or_sentinel(dt):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
-    def maps_link(street, city):
+    def maps_link(street, city, govmap_url):
         street = str(street).strip() if pd.notna(street) else ""
         address = f"{street}, {city}" if street else city
         query = quote_plus(f"{address}, ישראל")
         url = f"https://www.google.com/maps/search/?api=1&query={query}"
-        return f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
+        html = f'<a href="{url}" target="_blank" rel="noopener">{esc(address)}</a>'
+        if pd.notna(govmap_url):
+            html += f' &middot; <a href="{esc(govmap_url)}" target="_blank" rel="noopener">GovMap</a>'
+        return html
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1074,7 +1082,7 @@ def build_open_objections_report(latest_date, df):
 
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
-        f"<td>{maps_link(row.street, row.city)}</td>"
+        f"<td>{maps_link(row.street, row.city, row.govmap_url)}</td>"
         f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url)}</td>"
         f"<td>{reason_search_link(license_id, row)}</td>"
         f"<td>{esc(row.species)}</td>"
