@@ -46,6 +46,8 @@ APPLICANT_COL = "מבקש"
 LICENSE_COL = "מספר רישיון"
 STREET_COL = "רחוב ומספר בית"
 REASON_COL = "סיבת בקשה"
+GUSH_COL = "גוש"
+HELKA_COL = "חלקה"
 
 COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
 
@@ -972,6 +974,7 @@ def build_open_objections_report(latest_date, df):
         return shown
 
     has_reason = REASON_COL in open_df.columns
+    has_gush = GUSH_COL in open_df.columns and HELKA_COL in open_df.columns
     licenses = (
         open_df.groupby(LICENSE_COL)
         .agg(
@@ -984,6 +987,7 @@ def build_open_objections_report(latest_date, df):
             trees_to_cut=(CUT_COL, "sum"),
             species=(SPECIES_COL, join_species),
             **({"reason": (REASON_COL, "first")} if has_reason else {}),
+            **({"gush": (GUSH_COL, "first"), "helka": (HELKA_COL, "first")} if has_gush else {}),
         )
         .sort_values("days_left", ascending=True, na_position="last")
     )
@@ -995,6 +999,14 @@ def build_open_objections_report(latest_date, df):
     if "reason" not in licenses.columns:
         licenses["reason"] = ""
     licenses["reason"] = licenses["reason"].fillna("")
+    if "gush" not in licenses.columns:
+        licenses["gush"] = pd.NA
+        licenses["helka"] = pd.NA
+
+    def format_gush_helka(gush, helka):
+        if pd.isna(gush) or pd.isna(helka):
+            return "—"
+        return f"{gush}/{helka}"
 
     def format_days_left(days):
         if pd.isna(days):
@@ -1022,10 +1034,12 @@ def build_open_objections_report(latest_date, df):
 
     def objection_help_link(license_id, row):
         street = str(row.street).strip() if pd.notna(row.street) else ""
+        gush_helka = f"גוש {row.gush} חלקה {row.helka}" if pd.notna(row.gush) and pd.notna(row.helka) else ""
         data_lines = [
             f"רישיון כריתה מספר {int(license_id)}",
             row.city if pd.notna(row.city) else "",
             street,
+            gush_helka,
             row.species if pd.notna(row.species) else "",
             row.applicant if pd.notna(row.applicant) else "",
             row.reason if pd.notna(row.reason) else "",
@@ -1038,6 +1052,7 @@ def build_open_objections_report(latest_date, df):
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{maps_link(row.street, row.city)}</td>"
+        f"<td>{esc(format_gush_helka(row.gush, row.helka))}</td>"
         f"<td>{esc(row.reason) if row.reason else '—'}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
@@ -1144,18 +1159,19 @@ def build_open_objections_report(latest_date, df):
             </div>
         </div>
         <div class="table-scroll">
-        <table id="cityTable" data-sort-col="7" data-sort-dir="asc">
+        <table id="cityTable" data-sort-col="8" data-sort-dir="asc">
             <thead>
                 <tr>
                     <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
                     <th data-col="1" onclick="sortCities(1, 'string')">כתובת</th>
-                    <th data-col="2" onclick="sortCities(2, 'string')">סיבת בקשה</th>
-                    <th data-col="3" onclick="sortCities(3, 'string')">מיני עצים</th>
-                    <th data-col="4" onclick="sortCities(4, 'number')">עצים לכריתה</th>
-                    <th data-col="5" onclick="sortCities(5, 'string')">מבקש</th>
-                    <th data-col="6" onclick="sortCities(6, 'string')">מועד אחרון להשגה</th>
-                    <th data-col="7" class="sort-asc" onclick="sortCities(7, 'number')">ימים שנותרו</th>
-                    <th data-col="8" onclick="sortCities(8, 'number')">מספר רישיון</th>
+                    <th data-col="2" onclick="sortCities(2, 'string')">גוש/חלקה</th>
+                    <th data-col="3" onclick="sortCities(3, 'string')">סיבת בקשה</th>
+                    <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">עצים לכריתה</th>
+                    <th data-col="6" onclick="sortCities(6, 'string')">מבקש</th>
+                    <th data-col="7" onclick="sortCities(7, 'string')">מועד אחרון להשגה</th>
+                    <th data-col="8" class="sort-asc" onclick="sortCities(8, 'number')">ימים שנותרו</th>
+                    <th data-col="9" onclick="sortCities(9, 'number')">מספר רישיון</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
