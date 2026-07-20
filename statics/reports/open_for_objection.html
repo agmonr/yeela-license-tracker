@@ -88,7 +88,16 @@
         body { background: #fff; padding: 0; }
         .card, .panel { box-shadow: none; }
     }
+    @media (max-width: 640px) {
+        body { padding: 10px; font-size: 16px; }
+        header { padding: 16px 18px; border-radius: 14px; }
+        .panel, .card { padding: 14px; border-radius: 12px; }
+        .cards { gap: 12px; }
+        th, td { padding: 8px; }
+        th { white-space: normal; }
+    }
 
+    .container { max-width: 1600px; }
     .cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
     .card { border-top-color: var(--terracotta); }
     thead th { position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }
@@ -111,7 +120,7 @@
     <div class="panel explain">
         <div class="explain-header">
             <h2>איך משתמשים בקישורים בטבלה</h2>
-            <span class="created-at">נוצר ב-21/07/2026 00:35</span>
+            <span class="created-at">נוצר ב-21/07/2026 01:11</span>
         </div>
         <p>לחיצה על <strong>מספר הרישיון</strong> תפתח חיפוש בגוגל. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם. לחיצה על <strong>הכתובת</strong> תפתח את המיקום ב-Google Maps, כדי שתוכלו לראות את המקום בפועל.</p>
     </div>
@@ -163,7 +172,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-21/07/2026 00:35.<br>
+        נוצר אוטומטית ב-21/07/2026 01:11.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>

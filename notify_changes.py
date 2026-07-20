@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 import time
 from sheet_subscribers import get_subscribers
-from mailer import send_html_mail
+from mailer import send_html_mail, EMAIL_STYLE
 from config import ADMIN_EMAILS
 
 DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
@@ -93,19 +93,12 @@ def send_admin_summary(sent):
 <head>
 <meta charset="UTF-8">
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f4f7f6; padding: 20px; }}
-    .container {{ background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-    h2 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-    table {{ border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; }}
-    th, td {{ border: 1px solid #e0e0e0; padding: 10px 8px; text-align: right; }}
-    th {{ background-color: #3498db; color: white; white-space: nowrap; }}
-    tr:nth-child(even) {{ background-color: #f2f2f2; }}
-    .footer {{ margin-top: 30px; font-size: 12px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px; }}
+{EMAIL_STYLE}
 </style>
 </head>
 <body>
     <div class="container">
-        <h2>סיכום מיילים יומי - רישיונות כריתה</h2>
+        <h2>🌳 סיכום מיילים יומי - רישיונות כריתה</h2>
         {body_note}
         {table_html}
         <div class="footer">
@@ -162,23 +155,13 @@ def send_notifications(diff_df):
 <head>
 <meta charset="UTF-8">
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f4f7f6; padding: 20px; }}
-    .container {{ background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-    h2 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-    .diff-table {{ border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 13px; }}
-    .diff-table th, .diff-table td {{ border: 1px solid #e0e0e0; padding: 12px 8px; text-align: right; }}
-    .diff-table th {{ background-color: #3498db; color: white; white-space: nowrap; }}
-    .diff-table tr:nth-child(even) {{ background-color: #f2f2f2; }}
-    .diff-table tr:hover {{ background-color: #e1f5fe; }}
-    .status-new {{ color: #27ae60; font-weight: bold; }}
-    .status-removed {{ color: #c0392b; font-weight: bold; }}
-    .footer {{ margin-top: 30px; font-size: 12px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px; }}
+{EMAIL_STYLE}
 </style>
 </head>
 <body>
     <div class="container">
         {report_link_html}
-        <h2>עדכון רישיונות כריתה - {city_key}</h2>
+        <h2>🌳 עדכון רישיונות כריתה - {city_key}</h2>
         <p>שלום,</p>
         <p>נמצאו <strong>{len(city_diff)}</strong> שינויים ברשימת הרישיונות עבור היישוב <strong>{city_key}</strong>.</p>
 

@@ -88,6 +88,14 @@
         body { background: #fff; padding: 0; }
         .card, .panel { box-shadow: none; }
     }
+    @media (max-width: 640px) {
+        body { padding: 10px; font-size: 16px; }
+        header { padding: 16px 18px; border-radius: 14px; }
+        .panel, .card { padding: 14px; border-radius: 12px; }
+        .cards { gap: 12px; }
+        th, td { padding: 8px; }
+        th { white-space: normal; }
+    }
 
     .container { max-width: 640px; }
     .nav-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }

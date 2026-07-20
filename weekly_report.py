@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 import pandas as pd
 from config import ADMIN_EMAILS
-from mailer import send_html_mail
+from mailer import send_html_mail, EMAIL_STYLE
 
 DATE_RE = re.compile(r"full_licenses_(\d{4}-\d{2}-\d{2})\.csv$")
 
@@ -112,21 +112,12 @@ def send_weekly_report(diff_df):
 <head>
 <meta charset="UTF-8">
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f4f7f6; padding: 20px; }}
-    .container {{ background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-    h2 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-    table {{ border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; }}
-    th, td {{ border: 1px solid #e0e0e0; padding: 10px 8px; text-align: right; }}
-    th {{ background-color: #3498db; color: white; white-space: nowrap; }}
-    tr:nth-child(even) {{ background-color: #f2f2f2; }}
-    .status-new {{ color: #27ae60; font-weight: bold; }}
-    .status-removed {{ color: #c0392b; font-weight: bold; }}
-    .footer {{ margin-top: 30px; font-size: 12px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px; }}
+{EMAIL_STYLE}
 </style>
 </head>
 <body>
     <div class="container">
-        <h2>דוח שבועי - רישיונות כריתה</h2>
+        <h2>🌳 דוח שבועי - רישיונות כריתה</h2>
         <p><a href="https://agmonr.github.io/yeela-license-tracker/statics/reports/objections.html">דו"ח היענות הרשות</a>
         &middot; <a href="https://agmonr.github.io/yeela-license-tracker/statics/reports/open_for_objection.html">רישיונות פתוחים כרגע להגשת השגה</a></p>
         {body_note}

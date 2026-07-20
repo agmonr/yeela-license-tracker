@@ -147,6 +147,14 @@ BASE_CSS = """
         body { background: #fff; padding: 0; }
         .card, .panel { box-shadow: none; }
     }
+    @media (max-width: 640px) {
+        body { padding: 10px; font-size: 16px; }
+        header { padding: 16px 18px; border-radius: 14px; }
+        .panel, .card { padding: 14px; border-radius: 12px; }
+        .cards { gap: 12px; }
+        th, td { padding: 8px; }
+        th { white-space: normal; }
+    }
 """
 
 # Shared client-side export logic for sortable/filterable city tables.
@@ -399,7 +407,7 @@ def build_report(latest_date, df, trend):
 {FONT_LINKS}
 <style>
 {BASE_CSS}
-    .container {{ max-width: 1200px; }}
+    .container {{ max-width: 1400px; }}
     @media print {{ .tabs {{ display: none !important; }} }}
 </style>
 </head>
@@ -517,7 +525,7 @@ def build_city_report(latest_date, df):
 {FONT_LINKS}
 <style>
 {BASE_CSS}
-    .container {{ max-width: 900px; }}
+    .container {{ max-width: 1300px; }}
     header {{ position: sticky; top: 0; z-index: 20; }}
     thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
@@ -662,7 +670,7 @@ def build_objections_report(latest_date, df):
 {FONT_LINKS}
 <style>
 {BASE_CSS}
-    .container {{ max-width: 900px; }}
+    .container {{ max-width: 1300px; }}
     header {{ position: sticky; top: 0; z-index: 20; }}
     thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
@@ -822,7 +830,7 @@ def build_orphaned_cities_report(latest_date, df):
 {FONT_LINKS}
 <style>
 {BASE_CSS}
-    .container {{ max-width: 900px; }}
+    .container {{ max-width: 1300px; }}
     .cards {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
     .card {{ border-top-color: var(--berry); }}
     header {{ position: sticky; top: 0; z-index: 20; }}
@@ -1113,6 +1121,7 @@ def build_open_objections_report(latest_date, df):
 {FONT_LINKS}
 <style>
 {BASE_CSS}
+    .container {{ max-width: 1600px; }}
     .cards {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
     .card {{ border-top-color: var(--terracotta); }}
     thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
