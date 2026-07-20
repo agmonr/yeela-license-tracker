@@ -1013,11 +1013,16 @@ def build_open_objections_report(latest_date, df):
     def format_gush_helka(gush, helka, plan_number, plan_url):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
-        label = esc(f"{gush}/{helka}")
+        full_text = f"{gush}/{helka}"
+        truncated = len(full_text) > 20
+        label = esc(full_text[:20] + "…") if truncated else esc(full_text)
+        title_parts = [full_text] if truncated else []
+        if pd.notna(plan_number):
+            title_parts.append(f"תוכנית {plan_number}")
+        title = f' title="{esc(" · ".join(title_parts))}"' if title_parts else ""
         if pd.notna(plan_url):
-            title = f' title="תוכנית {esc(plan_number)}"' if pd.notna(plan_number) else ""
             return f'<a href="{esc(plan_url)}" target="_blank" rel="noopener"{title}>{label}</a>'
-        return label
+        return f'<span{title}>{label}</span>' if title else label
 
     def format_days_left(days):
         if pd.isna(days):
