@@ -5,6 +5,7 @@ import os
 import sqlite3
 import sys
 from datetime import date
+from urllib.parse import quote_plus
 import pandas as pd
 from playwright.async_api import async_playwright
 
@@ -344,7 +345,7 @@ async def lookup_parcel_geometry(page, gush, helka):
         return None
 
 
-async def lookup_plan(page, gush, helka):
+async def lookup_plan(page, gush, helka, city, street):
     """(gush, helka) -> (plan_number, plan_url, govmap_url).
 
     plan_number/plan_url are for the smallest (most specific) מנהל
@@ -366,7 +367,10 @@ async def lookup_plan(page, gush, helka):
     if geometry is None:
         return None, None, None
     x, y = first_point_from_esri_rings(geometry)
-    govmap_url = f"{GOVMAP_VIEW_URL}?c={x},{y}&z=12&b=1"
+    street = str(street).strip() if pd.notna(street) else ""
+    city = str(city).strip() if pd.notna(city) else ""
+    address = f"{street} {city}".strip()
+    govmap_url = f"{GOVMAP_VIEW_URL}?c={x},{y}&z=12&b=1&q={quote_plus(address)}"
     try:
         resp = await page.request.get(
             XPLAN_URL,
@@ -420,10 +424,14 @@ async def fill_plan_links(page, conn, df, open_license_ids, already_cached):
     if open_rows.empty:
         return {}
 
-    parcels = open_rows[[GUSH_COL, HELKA_COL]].drop_duplicates()
+    # One representative (city, street) per parcel, for the GovMap link's
+    # &q= address text - a parcel is one lookup regardless of how many
+    # license rows share it, so this just takes whichever address that
+    # parcel's first matching row happens to have.
+    parcels = open_rows[[GUSH_COL, HELKA_COL, CITY_COL, STREET_COL]].drop_duplicates(subset=[GUSH_COL, HELKA_COL])
     to_fetch = [
-        (gush, helka)
-        for gush, helka in parcels.itertuples(index=False)
+        (gush, helka, city, street)
+        for gush, helka, city, street in parcels.itertuples(index=False)
         # (None, None, None) covers both "never cached" and rows cached by
         # a version of this code before govmap_url existed (added via an
         # ALTER TABLE migration, so those rows have it NULL) - both need
@@ -436,8 +444,8 @@ async def fill_plan_links(page, conn, df, open_license_ids, already_cached):
     print(f"Looking up building plans and map links for {len(to_fetch)} parcels among open licenses...")
     resolved = {}
     n_with_plan = 0
-    for i, (gush, helka) in enumerate(to_fetch):
-        plan_number, plan_url, govmap_url = await lookup_plan(page, gush, helka)
+    for i, (gush, helka, city, street) in enumerate(to_fetch):
+        plan_number, plan_url, govmap_url = await lookup_plan(page, gush, helka, city, street)
         if plan_number is not None:
             status = plan_number
             n_with_plan += 1
