@@ -1048,7 +1048,7 @@ def build_open_objections_report(latest_date, df):
     config.read(CONFIG_PATH, encoding="utf-8")
     prompt_lines = [line.strip() for line in config["objection_help"]["prompt"].splitlines() if line.strip()]
 
-    def objection_help_link(license_id, row):
+    def search_url(license_id, row):
         street = str(row.street).strip() if pd.notna(row.street) else ""
         gush_helka = f"גוש {row.gush} חלקה {row.helka}" if pd.notna(row.gush) and pd.notna(row.helka) else ""
         data_lines = [
@@ -1062,14 +1062,21 @@ def build_open_objections_report(latest_date, df):
         ]
         clean_terms = prompt_lines + [str(t).strip() for t in data_lines if str(t).strip()]
         query = quote_plus(" ".join(clean_terms))
-        url = f"https://www.google.com/search?q={query}"
-        return f'<a href="{url}" target="_blank" rel="noopener">{int(license_id):,}</a>'
+        return f"https://www.google.com/search?q={query}"
+
+    def objection_help_link(license_id, row):
+        return f'<a href="{search_url(license_id, row)}" target="_blank" rel="noopener">{int(license_id):,}</a>'
+
+    def reason_search_link(license_id, row):
+        if not row.reason:
+            return "—"
+        return f'<a href="{search_url(license_id, row)}" target="_blank" rel="noopener">{esc(row.reason)}</a>'
 
     rows = "".join(
         f"<tr><td>{esc(row.city)}</td>"
         f"<td>{maps_link(row.street, row.city)}</td>"
         f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url)}</td>"
-        f"<td>{esc(row.reason) if row.reason else '—'}</td>"
+        f"<td>{reason_search_link(license_id, row)}</td>"
         f"<td>{esc(row.species)}</td>"
         f"<td>{int(row.trees_to_cut):,}</td>"
         f"<td>{esc(row.applicant)}</td>"
