@@ -12,6 +12,8 @@ repo alone.
 """
 import base64
 import configparser
+import html
+import json
 import re
 from datetime import datetime, timezone
 from io import BytesIO
@@ -1069,8 +1071,13 @@ def build_open_objections_report(latest_date, df):
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
     prompt_lines = [line.strip() for line in config["objection_help"]["prompt"].splitlines() if line.strip()]
+    default_prompt_text = "\n".join(prompt_lines)
 
-    def search_url(license_id, row):
+    # Per-row search terms travel to the browser as a data-terms attribute
+    # rather than being baked into a fixed href, so the AI-prompt field at
+    # the top of the page can be edited live and every row's link picks up
+    # the edit on click (see openObjectionSearch in the page script).
+    def data_terms(license_id, row):
         street = str(row.street).strip() if pd.notna(row.street) else ""
         gush_helka = f"גוש {row.gush} חלקה {row.helka}" if pd.notna(row.gush) and pd.notna(row.helka) else ""
         data_lines = [
@@ -1082,21 +1089,26 @@ def build_open_objections_report(latest_date, df):
             row.applicant if pd.notna(row.applicant) else "",
             row.reason if pd.notna(row.reason) else "",
         ]
-        clean_terms = prompt_lines + [str(t).strip() for t in data_lines if str(t).strip()]
-        query = quote_plus(" ".join(clean_terms))
-        return f"https://www.google.com/search?q={query}"
+        clean_terms = [str(t).strip() for t in data_lines if str(t).strip()]
+        return html.escape(json.dumps(clean_terms, ensure_ascii=False), quote=True)
 
     def objection_help_link(license_id, row):
-        return f'<a href="{search_url(license_id, row)}" target="_blank" rel="noopener">{int(license_id):,}</a>'
+        return (
+            f'<a href="#" class="ai-prompt-link" data-terms="{data_terms(license_id, row)}" '
+            f'onclick="return openObjectionSearch(this)">{int(license_id):,}</a>'
+        )
 
     def reason_search_link(license_id, row):
         if not row.reason:
             return "—"
-        return f'<a href="{search_url(license_id, row)}" target="_blank" rel="noopener">{esc(row.reason)}</a>'
+        return (
+            f'<a href="#" class="ai-prompt-link" data-terms="{data_terms(license_id, row)}" '
+            f'onclick="return openObjectionSearch(this)">{esc(row.reason)}</a>'
+        )
 
     rows = "".join(
-        f"<tr><td>{esc(row.city)}</td>"
-        f"<td>{maps_link(row.street, row.city, row.govmap_url)}</td>"
+        f'<tr><td class="frozen-col frozen-col-1">{esc(row.city)}</td>'
+        f'<td class="frozen-col frozen-col-2">{maps_link(row.street, row.city, row.govmap_url)}</td>'
         f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>"
         f"<td>{reason_search_link(license_id, row)}</td>"
         f"<td>{esc(row.species)}</td>"
@@ -1135,6 +1147,7 @@ def build_open_objections_report(latest_date, df):
     .explain-header {{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }}
     .created-at {{ color: #95a5a6; font-size: 12px; white-space: nowrap; }}
     .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
+    .ai-prompt-field {{ width: 100%; box-sizing: border-box; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid #dfe6e9; border-radius: 6px; resize: vertical; margin-bottom: 10px; }}
     .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
     .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e67e22; }}
     .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
@@ -1155,6 +1168,15 @@ def build_open_objections_report(latest_date, df):
     th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
     #cityTable th:nth-child(3), #cityTable td:nth-child(3) {{ width: 1%; white-space: nowrap; }}
     .map-icon {{ text-decoration: none; margin-inline-start: 2px; font-size: 18px; vertical-align: middle; }}
+    /* Frozen ישוב/כתובת columns: pinned to the physical right edge (where
+       they render first in RTL) so they stay visible while scrolling
+       through the rest of this wide table horizontally. */
+    .frozen-col {{ position: sticky; background-color: #fff; }}
+    .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
+    .frozen-col-2 {{ right: 100px; width: 220px; min-width: 220px; max-width: 220px; white-space: normal; box-shadow: -2px 0 2px -1px rgba(0,0,0,0.1); }}
+    thead .frozen-col {{ z-index: 16; }}
+    tbody .frozen-col {{ z-index: 5; }}
+    tr:hover .frozen-col {{ background-color: #fcfcfc; }}
     tr:hover {{ background-color: #fcfcfc; }}
     footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
     .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
@@ -1164,6 +1186,7 @@ def build_open_objections_report(latest_date, df):
         body {{ background: #fff; padding: 0; }}
         .panel {{ box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
+        .frozen-col {{ position: static; box-shadow: none; }}
     }}
 </style>
 </head>
@@ -1178,17 +1201,21 @@ def build_open_objections_report(latest_date, df):
     </header>
 
     <div class="panel explain">
-        <div class="explain-header">
-            <h2>איך משתמשים בקישורים בטבלה</h2>
-            <span class="created-at">נוצר ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}</span>
-        </div>
-        <p>לחיצה על <strong>מספר הרישיון</strong> תפתח חיפוש בגוגל. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם. לחיצה על <strong>הכתובת</strong> תפתח את המיקום ב-Google Maps, כדי שתוכלו לראות את המקום בפועל.</p>
-    </div>
-
-    <div class="panel explain">
         <h2>מה מציג הדוח</h2>
         <p>הדוח הזה מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
         <p>לתשומת לב: הנתונים הגולמיים של מערכת יעל"ה אינם כוללים שדה שמציין אם כבר הוגשה השגה על רישיון מסוים. הסטטוס היחיד הרלוונטי הוא סטטוס הרישיון עצמו - וכל הרישיונות בדוח זה נמצאים בסטטוס "{OPEN_STATUS}" בדיוק משום שטרם הוגשה עליהם השגה שהמערכת כבר עיבדה (ברגע שהשגה מתקבלת לטיפול, הרישיון עובר לסטטוס "בתהליך בחינת השגות שהוגשו" ויוצא מהדוח הזה). כלומר, מבחינת הנתונים הרשמיים - כל רישיון המופיע כאן עדיין ללא השגה שטופלה. אם השגה כבר הוגשה על ידי מישהו אך טרם עובדה במערכת, אין כרגע דרך לדעת זאת מתוך הנתונים הגלויים לציבור.</p>
+
+        <h2>הנחיה ל-AI לעזרה בכתיבת השגה</h2>
+        <p class="note">זו ההנחיה שנשלחת יחד עם פרטי הרישיון כשלוחצים על מספר הרישיון או על סיבת הבקשה בטבלה למטה. אפשר לערוך אותה כאן - השינוי ישפיע מיד על כל הקישורים בטבלה, כל עוד הדף פתוח (העריכה לא נשמרת אחרי רענון הדף).</p>
+        <textarea id="aiPromptField" class="ai-prompt-field" dir="rtl" rows="4">{esc(default_prompt_text)}</textarea>
+        <button class="export-btn" onclick="resetAiPrompt()">איפוס לברירת מחדל</button>
+    </div>
+
+    <div class="panel explain">
+        <div class="explain-header">
+            <h2>איך משתמשים בקישורים בטבלה</h2>
+        </div>
+        <p>לחיצה על <strong>מספר הרישיון</strong> תפתח חיפוש בגוגל, כולל ההנחיה שלמעלה. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם. לחיצה על <strong>הכתובת</strong> תפתח את המיקום ב-Google Maps, כדי שתוכלו לראות את המקום בפועל.</p>
     </div>
 
     <div class="cards">
@@ -1214,8 +1241,8 @@ def build_open_objections_report(latest_date, df):
         <table id="cityTable" data-sort-col="8" data-sort-dir="asc">
             <thead>
                 <tr>
-                    <th data-col="0" onclick="sortCities(0, 'string')">ישוב</th>
-                    <th data-col="1" onclick="sortCities(1, 'string')">כתובת</th>
+                    <th data-col="0" class="frozen-col frozen-col-1" onclick="sortCities(0, 'string')">ישוב</th>
+                    <th data-col="1" class="frozen-col frozen-col-2" onclick="sortCities(1, 'string')">כתובת</th>
                     <th data-col="2" onclick="sortCities(2, 'string')">גוש/חלקה</th>
                     <th data-col="3" onclick="sortCities(3, 'string')">סיבת בקשה</th>
                     <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
@@ -1238,6 +1265,21 @@ def build_open_objections_report(latest_date, df):
 </div>
 <script>
 {EXPORT_SCRIPT}
+const DEFAULT_AI_PROMPT = {json.dumps(default_prompt_text, ensure_ascii=False)};
+
+function resetAiPrompt() {{
+    document.getElementById('aiPromptField').value = DEFAULT_AI_PROMPT;
+}}
+
+function openObjectionSearch(link) {{
+    const promptLines = document.getElementById('aiPromptField').value
+        .split('\\n').map(s => s.trim()).filter(Boolean);
+    const rowTerms = JSON.parse(link.dataset.terms);
+    const query = encodeURIComponent(promptLines.concat(rowTerms).join(' ')).replace(/%20/g, '+');
+    window.open('https://www.google.com/search?q=' + query, '_blank', 'noopener');
+    return false;
+}}
+
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
     const tbody = document.getElementById('cityBody');
