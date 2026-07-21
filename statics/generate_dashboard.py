@@ -54,7 +54,132 @@ PLAN_NUMBER_COL = "מספר תכנית"
 PLAN_URL_COL = "קישור לתכנית"
 GOVMAP_URL_COL = "קישור ל-GovMap"
 
-COLORS = ["#2ecc71", "#e74c3c", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c"]
+COLORS = ["#4caf50", "#e05353", "#2ba8e0", "#f5a623", "#a1725c", "#2e8b57"]
+
+# Warm, high-contrast "tree lovers" theme: forest greens, sunny amber and a
+# cream paper background, bigger type and rounder shapes than a typical
+# admin dashboard so it's comfortable for older/less tech-savvy readers.
+# Loaded once in <head> on every page for a consistent, friendly typeface
+# with solid Hebrew glyph coverage.
+FONT_LINKS = """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">"""
+
+# Shared visual theme for every report page. Each build_* function embeds
+# this once via an f-string {BASE_CSS} placeholder, then layers a handful
+# of page-specific rules on top (container width, sticky header/table
+# variants) - see individual style blocks below.
+BASE_CSS = """
+    :root {
+        --forest-dark: #1b5e34;
+        --forest: #2e7d46;
+        --leaf: #4caf50;
+        --leaf-light: #a5d6a7;
+        --sun: #f5a623;
+        --sky: #2ba8e0;
+        --berry: #e05353;
+        --bark: #a1725c;
+        --terracotta: #e08130;
+        --bg: #f2f7ee;
+        --card: #ffffff;
+        --ink: #24331f;
+        --ink-soft: #5b6f56;
+        --border: #dfe9d8;
+        --shadow: rgba(27, 94, 52, 0.16);
+        --shadow-soft: rgba(27, 94, 52, 0.10);
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Rubik', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--ink); margin: 0; padding: 20px; font-size: 17px; line-height: 1.65; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .portal-bar { text-align: center; margin-bottom: 10px; }
+    .portal-bar a { color: var(--forest-dark); font-size: 13px; font-weight: 500; text-decoration: none; background: #eaf3e6; padding: 6px 16px; border-radius: 999px; display: inline-block; }
+    .portal-bar a:hover { background: var(--leaf-light); }
+    header { background: linear-gradient(135deg, var(--forest-dark), var(--forest) 60%, var(--leaf)); color: #fff; padding: 22px 26px; border-radius: 18px; margin-bottom: 25px; box-shadow: 0 8px 20px var(--shadow); }
+    header a { color: #eafbe7; font-weight: 500; }
+    header a:hover { color: #fff; }
+    h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .subtitle { margin: 6px 0 0; font-size: 14px; color: #d7ecd2; }
+    h2 { color: var(--forest-dark); border-bottom: 3px solid var(--leaf-light); padding-bottom: 8px; font-size: 20px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 15px; }
+    .tab-btn { background: #eaf3e6; border: none; border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 500; color: var(--forest-dark); cursor: pointer; }
+    .tab-btn:hover { background: var(--leaf-light); }
+    .tab-btn.active { background: var(--forest); color: #fff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .period-note { color: var(--ink-soft); font-size: 13px; margin: 0 0 10px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .card { background: var(--card); padding: 22px; border-radius: 16px; box-shadow: 0 6px 16px var(--shadow-soft); text-align: center; border-top: 5px solid var(--leaf); }
+    .card.cut { border-top-color: var(--berry); }
+    .card.move { border-top-color: var(--sky); }
+    .card.keep { border-top-color: var(--sun); }
+    .card.meta { border-top-color: var(--bark); }
+    .card.canceled { border-top-color: var(--terracotta); }
+    .card-val { font-size: 30px; font-weight: 700; margin: 10px 0; color: var(--forest-dark); }
+    .card-lbl { font-size: 14px; color: var(--ink-soft); }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: 25px; margin-bottom: 30px; }
+    .panel { background: var(--card); padding: 22px; border-radius: 16px; box-shadow: 0 6px 16px var(--shadow-soft); margin-bottom: 30px; }
+    .panel.explain h2 { color: var(--forest-dark); margin-top: 0; font-size: 19px; }
+    .panel.explain ul { margin: 10px 0; padding-right: 20px; }
+    .panel.explain li { margin-bottom: 8px; }
+    .explain-header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .created-at { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
+    .note { color: var(--ink-soft); font-size: 14px; margin: 0 0 15px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    #citySearch { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; width: 260px; max-width: 100%; }
+    #cityFilter { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; max-width: 100%; }
+    #citySearch:focus, #cityFilter:focus { outline: 3px solid var(--leaf-light); border-color: var(--forest); }
+    #cityCount { color: var(--ink-soft); font-size: 14px; }
+    .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .export-btn { background: var(--sky); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .export-btn:hover { background: #218cb8; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .table-scroll.is-scrollable::before { content: "👉 אפשר להחליק את הטבלה כדי לראות עוד עמודות"; display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); font-size: 15.5px; }
+    th { background-color: #eef5ea; color: var(--forest-dark); font-weight: 600; white-space: nowrap; }
+    th[onclick] { cursor: pointer; user-select: none; }
+    th.sort-asc::after { content: " \\25B2"; font-size: 10px; }
+    th.sort-desc::after { content: " \\25BC"; font-size: 10px; }
+    #cityTable th:nth-child(3), #cityTable td:nth-child(3) { min-width: 120px; white-space: nowrap; }
+    .map-icon { text-decoration: none; margin-inline-start: 2px; font-size: 18px; vertical-align: middle; }
+    tr:hover { background-color: #f7fbf4; }
+    .chart-img { max-width: 100%; height: auto; border-radius: 12px; }
+    footer { text-align: center; color: var(--ink-soft); font-size: 13px; margin: 30px 0 10px; }
+    .print-btn { background: var(--forest); color: #fff; border: none; border-radius: 999px; padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 12px; }
+    .print-btn:hover { background: var(--forest-dark); }
+    a { color: var(--sky); }
+    @media print {
+        .print-btn, .portal-bar { display: none !important; }
+        body { background: #fff; padding: 0; }
+        .card, .panel { box-shadow: none; }
+    }
+    @media (max-width: 640px) {
+        body { padding: 10px; font-size: 16px; }
+        header { padding: 16px 18px; border-radius: 14px; }
+        .panel, .card { padding: 14px; border-radius: 12px; }
+        .cards { gap: 12px; }
+        th, td { padding: 8px; }
+        th { white-space: normal; }
+        .table-scroll.is-scrollable::before {
+            display: block; background: var(--sun); color: #3a2a00; font-weight: 600;
+            font-size: 13px; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; text-align: center;
+        }
+    }
+"""
+
+# Flags any .table-scroll wrapper whose table is actually wider than its
+# viewport with .is-scrollable, so the CSS-only "swipe to see more" hint
+# (see BASE_CSS) only ever shows up on tables that truly need it, on
+# screens narrow enough (see the 640px breakpoint) that it matters.
+SCROLL_HINT_SCRIPT = """
+function markScrollableTables() {
+    document.querySelectorAll('.table-scroll').forEach(el => {
+        el.classList.toggle('is-scrollable', el.scrollWidth > el.clientWidth + 2);
+    });
+}
+markScrollableTables();
+window.addEventListener('resize', markScrollableTables);
+"""
 
 # Shared client-side export logic for sortable/filterable city tables.
 # Operates on currently visible (filtered) rows, in current DOM (sorted)
@@ -178,21 +303,21 @@ def chart_to_data_uri(fig):
 def style_axes(ax):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(axis="y", color="#ecf0f1", linewidth=1)
+    ax.grid(axis="y", color="#dfe9d8", linewidth=1)
     ax.set_axisbelow(True)
 
 
 def make_trend_chart(trend):
     fig, ax1 = plt.subplots(figsize=(10, 4.5))
-    ax1.plot(trend.index, trend["licenses"], marker="o", color="#3498db", label="סה\"כ רישיונות")
-    ax1.set_ylabel("רישיונות", color="#3498db")
-    ax1.tick_params(axis="y", labelcolor="#3498db")
+    ax1.plot(trend.index, trend["licenses"], marker="o", color="#2ba8e0", label="סה\"כ רישיונות")
+    ax1.set_ylabel("רישיונות", color="#2ba8e0")
+    ax1.tick_params(axis="y", labelcolor="#2ba8e0")
     plt.setp(ax1.get_xticklabels(), rotation=45, ha="right")
 
     ax2 = ax1.twinx()
-    ax2.plot(trend.index, trend["cut"], marker="s", color="#e74c3c", label="עצים לכריתה")
-    ax2.set_ylabel("עצים לכריתה", color="#e74c3c")
-    ax2.tick_params(axis="y", labelcolor="#e74c3c")
+    ax2.plot(trend.index, trend["cut"], marker="s", color="#e05353", label="עצים לכריתה")
+    ax2.set_ylabel("עצים לכריתה", color="#e05353")
+    ax2.tick_params(axis="y", labelcolor="#e05353")
 
     ax1.set_title("מגמת רישיונות ועצים מאושרים לכריתה לאורך זמן")
     style_axes(ax1)
@@ -206,7 +331,7 @@ def make_barh_chart(series, title, color):
     ax.barh(ordered.index, ordered.values, color=color)
     ax.set_title(title)
     style_axes(ax)
-    ax.grid(axis="x", color="#ecf0f1", linewidth=1)
+    ax.grid(axis="x", color="#dfe9d8", linewidth=1)
     fig.tight_layout()
     return chart_to_data_uri(fig)
 
@@ -269,9 +394,9 @@ def build_report(latest_date, df, trend):
     top_cities = df.groupby(CITY_COL)[CUT_COL].sum().sort_values(ascending=False).head(20)
     status_counts = df[STATUS_COL].value_counts().head(8)
 
-    species_chart = make_barh_chart(top_species, "20 מיני העצים המובילים בכריתה", "#e74c3c")
-    cities_chart = make_barh_chart(top_cities, "20 היישובים המובילים בכריתה", "#3498db")
-    status_chart = make_barh_chart(status_counts, "התפלגות סטטוס רישיונות", "#9b59b6")
+    species_chart = make_barh_chart(top_species, "20 מיני העצים המובילים בכריתה", "#e05353")
+    cities_chart = make_barh_chart(top_cities, "20 היישובים המובילים בכריתה", "#4caf50")
+    status_chart = make_barh_chart(status_counts, "התפלגות סטטוס רישיונות", "#f5a623")
 
     tab_buttons = ""
     tab_panels = ""
@@ -303,52 +428,18 @@ def build_report(latest_date, df, trend):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>דוח סטטיסטיקה ומגמות - רישיונות כריתה ({latest_date})</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
-    .container {{ max-width: 1200px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-    header a {{ color: #ecf0f1; }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
-    h2 {{ color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 8px; }}
-    .tabs {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 15px; }}
-    .tab-btn {{ background: #ecf0f1; border: none; border-radius: 20px; padding: 8px 16px; font-size: 13px; color: #2c3e50; cursor: pointer; }}
-    .tab-btn:hover {{ background: #dfe6e9; }}
-    .tab-btn.active {{ background: #2c3e50; color: #fff; }}
-    .tab-panel {{ display: none; }}
-    .tab-panel.active {{ display: block; }}
-    .period-note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 10px; }}
-    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }}
-    .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #2ecc71; }}
-    .card.cut {{ border-top-color: #e74c3c; }}
-    .card.move {{ border-top-color: #3498db; }}
-    .card.keep {{ border-top-color: #f1c40f; }}
-    .card.meta {{ border-top-color: #9b59b6; }}
-    .card.canceled {{ border-top-color: #d35400; }}
-    .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
-    .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
-    .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: 25px; margin-bottom: 30px; }}
-    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
-    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
-    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; white-space: nowrap; }}
-    tr:hover {{ background-color: #fcfcfc; }}
-    .chart-img {{ max-width: 100%; height: auto; border-radius: 8px; }}
-    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
-    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
-    .print-btn:hover {{ background: #219150; }}
-    @media print {{
-        .print-btn, .tabs {{ display: none !important; }}
-        body {{ background: #fff; padding: 0; }}
-        .card, .panel {{ box-shadow: none; }}
-    }}
+{BASE_CSS}
+    .container {{ max-width: 1400px; }}
+    @media print {{ .tabs {{ display: none !important; }} }}
 </style>
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
-        <h1>דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
+        <h1>🌳 דוח מגמות וסטטיסטיקה: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
@@ -409,11 +500,13 @@ def build_report(latest_date, df, trend):
     </footer>
 </div>
 <script>
+{SCROLL_HINT_SCRIPT}
 function showTrendTab(key) {{
     document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('tab-' + key).classList.add('active');
     document.getElementById('btn-' + key).classList.add('active');
+    markScrollableTables();
 }}
 </script>
 </body>
@@ -456,45 +549,24 @@ def build_city_report(latest_date, df):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>דוח לפי יישוב - רישיונות כריתה ({latest_date})</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
-    .container {{ max-width: 900px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
-    header a {{ color: #ecf0f1; }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
-    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
-    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
-    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
-    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
-    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
-    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
-    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
-    .export-btn:hover {{ background: #2980b9; }}
-    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
-    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
-    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
-    tr:hover {{ background-color: #fcfcfc; }}
-    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
-    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
-    .print-btn:hover {{ background: #219150; }}
+{BASE_CSS}
+    .container {{ max-width: 1300px; }}
+    header {{ position: sticky; top: 0; z-index: 20; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
-        .print-btn, .toolbar {{ display: none !important; }}
-        body {{ background: #fff; padding: 0; }}
+        .toolbar {{ display: none !important; }}
         header {{ position: static; box-shadow: none; }}
-        .panel {{ box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
-        <h1>דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
+        <h1>🌳 דוח לפי יישוב: רישיונות כריתה והעתקה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
@@ -534,6 +606,7 @@ def build_city_report(latest_date, df):
     </footer>
 </div>
 <script>
+{SCROLL_HINT_SCRIPT}
 {EXPORT_SCRIPT}
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
@@ -623,49 +696,24 @@ def build_objections_report(latest_date, df):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>דו"ח היענות הרשות - עצים שניצלו ({latest_date})</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
-    .container {{ max-width: 900px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
-    header a {{ color: #ecf0f1; }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
-    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
-    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
-    .panel.explain ul {{ margin: 10px 0; padding-right: 20px; }}
-    .panel.explain li {{ margin-bottom: 8px; }}
-    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
-    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
-    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
-    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
-    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
-    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
-    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
-    .export-btn:hover {{ background: #2980b9; }}
-    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
-    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
-    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
-    tr:hover {{ background-color: #fcfcfc; }}
-    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
-    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
-    .print-btn:hover {{ background: #219150; }}
+{BASE_CSS}
+    .container {{ max-width: 1300px; }}
+    header {{ position: sticky; top: 0; z-index: 20; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
-        .print-btn, .toolbar {{ display: none !important; }}
-        body {{ background: #fff; padding: 0; }}
+        .toolbar {{ display: none !important; }}
         header {{ position: static; box-shadow: none; }}
-        .panel {{ box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
-        <h1>דו"ח היענות הרשות</h1>
+        <h1>🌳 דו"ח היענות הרשות</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
@@ -715,6 +763,7 @@ def build_objections_report(latest_date, df):
     </footer>
 </div>
 <script>
+{SCROLL_HINT_SCRIPT}
 {EXPORT_SCRIPT}
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
@@ -809,50 +858,26 @@ def build_orphaned_cities_report(latest_date, df):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>יישובים "יתומים" - ללא השגה שהצליחה ({latest_date})</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
-    .container {{ max-width: 900px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 20; }}
-    header a {{ color: #ecf0f1; }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
-    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
-    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
-    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
-    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
-    .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e74c3c; }}
-    .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
-    .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
-    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
-    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
-    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
-    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
-    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
-    .export-btn:hover {{ background: #2980b9; }}
-    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
-    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
-    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
-    tr:hover {{ background-color: #fcfcfc; }}
-    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
-    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
-    .print-btn:hover {{ background: #219150; }}
+{BASE_CSS}
+    .container {{ max-width: 1300px; }}
+    .cards {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
+    .card {{ border-top-color: var(--berry); }}
+    header {{ position: sticky; top: 0; z-index: 20; }}
+    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
-        .print-btn, .toolbar {{ display: none !important; }}
-        body {{ background: #fff; padding: 0; }}
+        .toolbar {{ display: none !important; }}
         header {{ position: static; box-shadow: none; }}
-        .panel {{ box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
-        <h1>יישובים "יתומים" - ללא השגה שהצליחה</h1>
+        <h1>🌳 יישובים "יתומים" - ללא השגה שהצליחה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
@@ -901,6 +926,7 @@ def build_orphaned_cities_report(latest_date, df):
     </footer>
 </div>
 <script>
+{SCROLL_HINT_SCRIPT}
 {EXPORT_SCRIPT}
 function sortCities(col, type) {{
     const table = document.getElementById('cityTable');
@@ -1135,56 +1161,25 @@ def build_open_objections_report(latest_date, df):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>דוח רישיונות פתוחים להגשת השגה ({latest_date})</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }}
-    .container {{ max-width: 1100px; margin: 0 auto; }}
-    header {{ background-color: #2c3e50; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-    header a {{ color: #ecf0f1; }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    .subtitle {{ margin: 6px 0 0; font-size: 13px; color: #bdc3c7; }}
-    .panel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; }}
-    .panel.explain h2 {{ color: #2c3e50; margin-top: 0; font-size: 18px; }}
-    .explain-header {{ display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }}
-    .created-at {{ color: #95a5a6; font-size: 12px; white-space: nowrap; }}
-    .note {{ color: #7f8c8d; font-size: 13px; margin: 0 0 15px; }}
-    .ai-prompt-field {{ width: 100%; box-sizing: border-box; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid #dfe6e9; border-radius: 6px; resize: vertical; margin-bottom: 10px; }}
-    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }}
-    .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #e67e22; }}
-    .card-val {{ font-size: 26px; font-weight: bold; margin: 10px 0; color: #2c3e50; }}
-    .card-lbl {{ font-size: 13px; color: #7f8c8d; }}
-    .toolbar {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }}
-    #citySearch {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 260px; max-width: 100%; }}
-    #cityFilter {{ padding: 8px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; max-width: 100%; }}
-    #cityCount {{ color: #7f8c8d; font-size: 13px; }}
-    .toolbar-actions {{ display: flex; gap: 8px; flex-wrap: wrap; }}
-    .export-btn {{ background: #3498db; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer; }}
-    .export-btn:hover {{ background: #2980b9; }}
-    .table-scroll {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 10px 12px; text-align: right; border-bottom: 1px solid #ecf0f1; font-size: 14px; }}
-    th {{ background-color: #f8f9fa; color: #2c3e50; cursor: pointer; user-select: none; white-space: nowrap; }}
-    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1); }}
-    th.sort-asc::after {{ content: " \\25B2"; font-size: 10px; }}
-    th.sort-desc::after {{ content: " \\25BC"; font-size: 10px; }}
-    #cityTable th:nth-child(3), #cityTable td:nth-child(3) {{ width: 1%; white-space: nowrap; }}
-    .map-icon {{ text-decoration: none; margin-inline-start: 2px; font-size: 18px; vertical-align: middle; }}
+{BASE_CSS}
+    .container {{ max-width: 1600px; }}
+    .cards {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
+    .card {{ border-top-color: var(--terracotta); }}
+    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
+    .ai-prompt-field {{ width: 100%; box-sizing: border-box; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 10px; resize: vertical; margin-bottom: 10px; }}
     /* Frozen ישוב/כתובת columns: pinned to the physical right edge (where
        they render first in RTL) so they stay visible while scrolling
        through the rest of this wide table horizontally. */
-    .frozen-col {{ position: sticky; background-color: #fff; }}
+    .frozen-col {{ position: sticky; background-color: var(--card); }}
     .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
-    .frozen-col-2 {{ right: 100px; width: 220px; min-width: 220px; max-width: 220px; white-space: normal; box-shadow: -2px 0 2px -1px rgba(0,0,0,0.1); }}
+    .frozen-col-2 {{ right: 100px; width: 220px; min-width: 220px; max-width: 220px; white-space: normal; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
-    tr:hover .frozen-col {{ background-color: #fcfcfc; }}
-    tr:hover {{ background-color: #fcfcfc; }}
-    footer {{ text-align: center; color: #95a5a6; font-size: 12px; margin: 30px 0 10px; }}
-    .print-btn {{ background: #27ae60; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; margin-top: 10px; }}
-    .print-btn:hover {{ background: #219150; }}
+    tr:hover .frozen-col {{ background-color: #f7fbf4; }}
     @media print {{
-        .print-btn, .toolbar {{ display: none !important; }}
-        body {{ background: #fff; padding: 0; }}
-        .panel {{ box-shadow: none; }}
+        .toolbar {{ display: none !important; }}
         thead th {{ position: static; box-shadow: none; }}
         .frozen-col {{ position: static; box-shadow: none; }}
     }}
@@ -1192,8 +1187,9 @@ def build_open_objections_report(latest_date, df):
 </head>
 <body>
 <div class="container">
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
     <header>
-        <h1>רישיונות פתוחים להגשת השגה</h1>
+        <h1>🌳 רישיונות פתוחים להגשת השגה</h1>
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
@@ -1264,6 +1260,7 @@ def build_open_objections_report(latest_date, df):
     </footer>
 </div>
 <script>
+{SCROLL_HINT_SCRIPT}
 {EXPORT_SCRIPT}
 const DEFAULT_AI_PROMPT = {json.dumps(default_prompt_text, ensure_ascii=False)};
 
@@ -1339,27 +1336,42 @@ def build_index(trend):
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>ארכיון דוחות שבועיים</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ארכיון דוחות שבועיים - רישיונות כריתה</title>
+{FONT_LINKS}
 <style>
-    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; }}
-    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
-    h1 {{ color: #2c3e50; font-size: 20px; }}
-    ul {{ line-height: 2; }}
-    a {{ color: #3498db; text-decoration: none; }}
-    a:hover {{ text-decoration: underline; }}
+{BASE_CSS}
+    .container {{ max-width: 640px; }}
+    .nav-list {{ display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }}
+    .nav-list a {{ display: block; background: #eaf3e6; color: var(--forest-dark); text-decoration: none; font-weight: 500; font-size: 16px; padding: 14px 18px; border-radius: 12px; }}
+    .nav-list a:hover {{ background: var(--leaf-light); }}
+    .archive-list {{ line-height: 2.2; padding-right: 20px; margin: 0; }}
 </style>
 </head>
 <body>
 <div class="container">
-    <h1>ארכיון דוחות שבועיים - רישיונות כריתה</h1>
-    <p>האתר בהרצה, עלולות להיות טעויות</p>
-    <p><a href="open_for_objection.html">רישיונות פתוחים להגשת השגה (מיון וסינון)</a></p>
-    <p><a href="current.html">הדוח האחרון</a></p>
-    <p><a href="objections.html">דו"ח היענות הרשות</a></p>
-    <p><a href="by_city.html">דוח לפי יישוב (מיון וסינון)</a></p>
-    <p><a href="orphaned_cities.html">יישובים "יתומים" - ללא השגה שהצליחה</a></p>
-    <p><a href="llms.txt">רשימת קישורים לכל הדוחות (טקסט פשוט)</a></p>
-    <ul>{rows}</ul>
+    <div class="portal-bar"><a href="https://agmonr.github.io/govapiportal/" target="_blank" rel="noopener">🏛️ חלק מ-GovAPIPortal</a></div>
+    <header>
+        <h1>🌳 ארכיון דוחות שבועיים</h1>
+        <p class="subtitle">רישיונות כריתה והעתקה &middot; פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים</p>
+        <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
+    </header>
+
+    <div class="panel">
+        <ul class="nav-list">
+            <li><a href="open_for_objection.html">🍃 רישיונות פתוחים להגשת השגה (מיון וסינון)</a></li>
+            <li><a href="current.html">📋 הדוח האחרון</a></li>
+            <li><a href="objections.html">✅ דו"ח היענות הרשות</a></li>
+            <li><a href="by_city.html">🏘️ דוח לפי יישוב (מיון וסינון)</a></li>
+            <li><a href="orphaned_cities.html">🌱 יישובים "יתומים" - ללא השגה שהצליחה</a></li>
+            <li><a href="llms.txt">📄 רשימת קישורים לכל הדוחות (טקסט פשוט)</a></li>
+        </ul>
+    </div>
+
+    <div class="panel">
+        <h2>דוחות היסטוריים לפי תאריך</h2>
+        <ul class="archive-list">{rows}</ul>
+    </div>
 </div>
 </body>
 </html>
