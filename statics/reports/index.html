@@ -71,7 +71,7 @@
     .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .export-btn { background: var(--sky); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .export-btn:hover { background: #218cb8; }
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .table-scroll { overflow: auto; -webkit-overflow-scrolling: touch; position: relative; max-height: 70vh; }
     .table-scroll.is-scrollable::before { content: "👉 אפשר להחליק את הטבלה כדי לראות עוד עמודות"; display: none; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); font-size: 15.5px; }
@@ -136,6 +136,11 @@
         <h2>דוחות היסטוריים לפי תאריך</h2>
         <ul class="archive-list"><li><a href="report_2026-07-21.html">2026-07-21</a></li><li><a href="report_2026-07-20.html">2026-07-20</a></li><li><a href="report_2026-07-19.html">2026-07-19</a></li><li><a href="report_2026-07-18.html">2026-07-18</a></li><li><a href="report_2026-07-17.html">2026-07-17</a></li><li><a href="report_2026-07-16.html">2026-07-16</a></li><li><a href="report_2026-07-15.html">2026-07-15</a></li><li><a href="report_2026-07-14.html">2026-07-14</a></li><li><a href="report_2026-07-13.html">2026-07-13</a></li><li><a href="report_2026-07-12.html">2026-07-12</a></li><li><a href="report_2026-07-11.html">2026-07-11</a></li><li><a href="report_2026-07-10.html">2026-07-10</a></li><li><a href="report_2026-07-09.html">2026-07-09</a></li><li><a href="report_2026-07-08.html">2026-07-08</a></li><li><a href="report_2026-07-07.html">2026-07-07</a></li><li><a href="report_2026-07-06.html">2026-07-06</a></li><li><a href="report_2026-07-02.html">2026-07-02</a></li><li><a href="report_2026-07-01.html">2026-07-01</a></li><li><a href="report_2026-06-30.html">2026-06-30</a></li><li><a href="report_2026-06-29.html">2026-06-29</a></li><li><a href="report_2026-06-28.html">2026-06-28</a></li></ul>
     </div>
+
+    <footer>
+        נוצר אוטומטית ב-21/07/2026 14:45.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
 </div>
 </body>
 </html>

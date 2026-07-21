@@ -132,7 +132,7 @@ BASE_CSS = """
     .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .export-btn { background: var(--sky); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; }
     .export-btn:hover { background: #218cb8; }
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative; }
+    .table-scroll { overflow: auto; -webkit-overflow-scrolling: touch; position: relative; max-height: 70vh; }
     .table-scroll.is-scrollable::before { content: "👉 אפשר להחליק את הטבלה כדי לראות עוד עמודות"; display: none; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { padding: 12px 14px; text-align: right; border-bottom: 1px solid var(--border); font-size: 15.5px; }
@@ -553,11 +553,9 @@ def build_city_report(latest_date, df):
 <style>
 {BASE_CSS}
     .container {{ max-width: 1300px; }}
-    header {{ position: sticky; top: 0; z-index: 20; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
+    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
         .toolbar {{ display: none !important; }}
-        header {{ position: static; box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
@@ -645,12 +643,6 @@ function filterCities() {{
 }}
 filterCities();
 
-function updateStickyOffsets() {{
-    const headerEl = document.querySelector('header');
-    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
-}}
-updateStickyOffsets();
-window.addEventListener('resize', updateStickyOffsets);
 </script>
 </body>
 </html>
@@ -700,11 +692,9 @@ def build_objections_report(latest_date, df):
 <style>
 {BASE_CSS}
     .container {{ max-width: 1300px; }}
-    header {{ position: sticky; top: 0; z-index: 20; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
+    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
         .toolbar {{ display: none !important; }}
-        header {{ position: static; box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
@@ -802,12 +792,6 @@ function filterCities() {{
 }}
 filterCities();
 
-function updateStickyOffsets() {{
-    const headerEl = document.querySelector('header');
-    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
-}}
-updateStickyOffsets();
-window.addEventListener('resize', updateStickyOffsets);
 </script>
 </body>
 </html>
@@ -864,11 +848,9 @@ def build_orphaned_cities_report(latest_date, df):
     .container {{ max-width: 1300px; }}
     .cards {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }}
     .card {{ border-top-color: var(--berry); }}
-    header {{ position: sticky; top: 0; z-index: 20; }}
-    thead th {{ position: sticky; top: var(--header-h, 0px); z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
+    thead th {{ position: sticky; top: 0; z-index: 15; box-shadow: 0 2px 2px -1px var(--shadow-soft); }}
     @media print {{
         .toolbar {{ display: none !important; }}
-        header {{ position: static; box-shadow: none; }}
         thead th {{ position: static; box-shadow: none; }}
     }}
 </style>
@@ -965,12 +947,6 @@ function filterCities() {{
 }}
 filterCities();
 
-function updateStickyOffsets() {{
-    const headerEl = document.querySelector('header');
-    document.documentElement.style.setProperty('--header-h', headerEl.getBoundingClientRect().height + 'px');
-}}
-updateStickyOffsets();
-window.addEventListener('resize', updateStickyOffsets);
 </script>
 </body>
 </html>
@@ -1372,6 +1348,11 @@ def build_index(trend):
         <h2>דוחות היסטוריים לפי תאריך</h2>
         <ul class="archive-list">{rows}</ul>
     </div>
+
+    <footer>
+        נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}.<br>
+        נוצר על ידי רם אגמון, הוד השרון.
+    </footer>
 </div>
 </body>
 </html>
