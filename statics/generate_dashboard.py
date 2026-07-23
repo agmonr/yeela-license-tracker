@@ -1127,7 +1127,7 @@ def build_open_objections_report(latest_date, df):
 
     def ai_icon_link(license_id, row):
         return (
-            f'<a href="#" class="ai-prompt-link share-icon" data-terms="{data_terms(license_id, row)}" '
+            f'<a href="#" class="ai-prompt-link action-icon" data-terms="{data_terms(license_id, row)}" '
             f'title="עזרה בהגשת השגה (AI)" onclick="return openObjectionSearch(this)">🤖</a>'
         )
 
@@ -1256,7 +1256,26 @@ def build_open_objections_report(latest_date, df):
     .trees-col {{ text-align: center; }}
     #cityTable td {{ border-bottom-color: #aaa; }}
     #cityTable th {{ text-align: center; }}
-    .share-icon {{ text-decoration: none; cursor: pointer; }}
+    /* Icon "dashboard": row 1 (map/GovMap/plan) = info, row 2
+       (share/WhatsApp) = spread, row 3 (AI) = action - each row gets its
+       own accent color so the purpose reads at a glance, and every icon
+       pops on hover so it feels alive without costing more than a
+       transform/box-shadow transition. */
+    .map-icon, .share-icon, .action-icon {{
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px; border-radius: 50%;
+        text-decoration: none; font-size: 14px; margin-inline-start: 2px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }}
+    .map-icon {{ background: #e3f0ff; }}
+    .share-icon {{ background: #e3f8ec; cursor: pointer; }}
+    .action-icon {{ background: #fff1d6; cursor: pointer; }}
+    .map-icon:hover, .share-icon:hover, .action-icon:hover {{
+        transform: scale(1.35);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        position: relative; z-index: 10;
+    }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
     tr.link-copied {{ background-color: #fff3cd; transition: background-color 0.3s; }}

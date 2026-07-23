@@ -62,13 +62,25 @@ PLANNING_ICON_SVG = (
 # this used to be.
 CARD_STYLE = """
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #fff; padding: 12px; color: #24331f; }
+    .brand { text-align: center; font-size: 20px; font-weight: bold; color: #1b5e34; letter-spacing: 1px; margin-bottom: 4px; }
+    .generated-at { color: #5b6f56; font-size: 13px; margin: 0 0 8px; }
     h2 { color: #1b5e34; border-bottom: 3px solid #a5d6a7; padding-bottom: 8px; font-size: 22px; }
-    table, .diff-table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; direction: rtl; }
+    table, .diff-table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 28px; direction: rtl; }
     th, td, .diff-table th, .diff-table td { border: 1px solid #dfe9d8; padding: 8px; text-align: right; direction: rtl; overflow-wrap: anywhere; }
     th, .diff-table th { background-color: #2e7d46; color: #fff; }
-    .diff-table th:nth-child(1), .diff-table td:nth-child(1) { width: 20ch; max-width: 20ch; white-space: normal; word-break: break-word; }
+    .diff-table th:nth-child(1), .diff-table td:nth-child(1) { width: 12ch; max-width: 12ch; white-space: normal; word-break: break-word; }
     tr { break-inside: avoid; page-break-inside: avoid; }
     a { color: #2ba8e0; }
+    /* Same info/spread/action icon grouping as the website (no hover -
+       this is print/PDF), so a printed page reads the same at a glance. */
+    .map-icon, .share-icon, .action-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px; border-radius: 50%; margin-inline-start: 3px;
+        text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    }
+    .map-icon { background: #e3f0ff; }
+    .share-icon { background: #e3f8ec; }
+    .action-icon { background: #fff1d6; }
 """
 
 
@@ -154,10 +166,11 @@ def whatsapp_message_lines(row, license_id, share_url):
 def whatsapp_icon_link(row, license_id, share_url, use_svg_icons=False):
     text = quote_plus("\n".join(whatsapp_message_lines(row, license_id, share_url)))
     label = WHATSAPP_ICON_SVG if use_svg_icons else "💬"
-    return f'<a href="https://wa.me/?text={text}" target="_blank" rel="noopener">{label}</a>'
+    cls_attr = ' class="share-icon"' if use_svg_icons else ""
+    return f'<a href="https://wa.me/?text={text}" target="_blank" rel="noopener"{cls_attr}>{label}</a>'
 
 
-def maps_link(row, label="🗺️ מפה"):
+def maps_link(row, label="🗺️ מפה", cls=""):
     """Static (non-JS) Google Maps link, for the same address shown on the dashboard."""
     street = str(row.get(STREET_COL, "") or "").strip()
     city = str(row.get(CITY_COL, "") or "").strip()
@@ -166,7 +179,8 @@ def maps_link(row, label="🗺️ מפה"):
         return ""
     query = quote_plus(f"{address}, ישראל")
     url = f"https://www.google.com/maps/search/?api=1&query={query}"
-    return f'<a href="{url}" target="_blank" rel="noopener">{label}</a>'
+    cls_attr = f' class="{cls}"' if cls else ""
+    return f'<a href="{url}" target="_blank" rel="noopener"{cls_attr}>{label}</a>'
 
 
 def address_cell(row, license_id, prompt_lines, use_svg_icons=False):
@@ -187,23 +201,26 @@ def address_cell(row, license_id, prompt_lines, use_svg_icons=False):
     display_address = street if street else city
     city_span = f" ({html.escape(city)})" if street else ""
 
+    icon_cls = "map-icon" if use_svg_icons else ""
     maps_icon = GOOGLE_MAPS_ICON_SVG if use_svg_icons else "🗺️"
-    icons_line1 = maps_link(row, label=maps_icon)
+    icons_line1 = maps_link(row, label=maps_icon, cls=icon_cls)
     govmap_url = str(row.get(GOVMAP_URL_COL, "") or "").strip()
     if govmap_url:
-        icons_line1 += " " + url_link(govmap_url, "🛰️")
+        icons_line1 += " " + url_link(govmap_url, "🛰️", cls=icon_cls)
     plan_url = str(row.get(PLAN_URL_COL, "") or "").strip()
     reason = str(row.get(REASON_COL, "") or "").strip()
     if plan_url and is_construction_reason(reason):
         plan_icon = PLANNING_ICON_SVG if use_svg_icons else "📋"
-        icons_line1 += " " + url_link(plan_url, plan_icon)
+        icons_line1 += " " + url_link(plan_url, plan_icon, cls=icon_cls)
 
+    share_cls = "share-icon" if use_svg_icons else ""
     share_url = f"{REPORTS_BASE_URL}open_for_objection.html#search-{quote_plus(city)}"
     icons_line2 = (
-        f'{url_link(share_url, "🔗")} '
+        f'{url_link(share_url, "🔗", cls=share_cls)} '
         f"{whatsapp_icon_link(row, license_id, share_url, use_svg_icons=use_svg_icons)}"
     )
-    ai_line = objection_search_link(row, prompt_lines, label="🤖")
+    action_cls = "action-icon" if use_svg_icons else ""
+    ai_line = objection_search_link(row, prompt_lines, label="🤖", cls=action_cls)
 
     return f'{html.escape(display_address)}{city_span}<br>{icons_line1}<br>{icons_line2}<br>{ai_line}'
 
@@ -228,17 +245,19 @@ def objection_search_url(row, prompt_lines):
     return f"https://www.google.com/search?q={query}"
 
 
-def objection_search_link(row, prompt_lines, label="🔍 עזרה בהגשת השגה"):
-    return f'<a href="{objection_search_url(row, prompt_lines)}" target="_blank" rel="noopener">{label}</a>'
+def objection_search_link(row, prompt_lines, label="🔍 עזרה בהגשת השגה", cls=""):
+    cls_attr = f' class="{cls}"' if cls else ""
+    return f'<a href="{objection_search_url(row, prompt_lines)}" target="_blank" rel="noopener"{cls_attr}>{label}</a>'
 
 
-def url_link(url, label):
+def url_link(url, label, cls=""):
     """Turns a bare URL into a fixed-label link, so raw mavat.iplan.gov.il/
     govmap.gov.il URLs don't force layouts wider than they need to be."""
     url = str(url or "").strip()
     if not url:
         return ""
-    return f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">{label}</a>'
+    cls_attr = f' class="{cls}"' if cls else ""
+    return f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener"{cls_attr}>{label}</a>'
 
 
 def email_days_left_text(days_left):
@@ -251,7 +270,7 @@ def email_days_left_text(days_left):
     return f"{days_left:,}"
 
 
-def build_email_row_html(row, prompt_lines, use_svg_icons=False):
+def build_email_row_html(row, prompt_lines, use_svg_icons=False, include_license_col=False):
     license_id = str(row.get(LICENSE_COL, "")).strip()
     days_left = parse_days_left(row.get(DEADLINE_COL, ""))
     try:
@@ -261,6 +280,7 @@ def build_email_row_html(row, prompt_lines, use_svg_icons=False):
 
     bg = deadline_bg(days_left, trees_to_cut)
     row_style = f' style="background-color:{bg}"' if bg else ""
+    license_cell = f"<td>{html.escape(license_id)}</td>" if include_license_col else ""
 
     return (
         f"<tr{row_style}>"
@@ -268,32 +288,37 @@ def build_email_row_html(row, prompt_lines, use_svg_icons=False):
         f'<td>{html.escape(str(row.get(CUT_COL, "")))}</td>'
         f"<td>{email_days_left_text(days_left)}</td>"
         f"<td>{html.escape(str(row.get(REASON_COL, '')) or '—')}</td>"
+        f"{license_cell}"
         f"</tr>"
     )
 
 
-def build_email_table_html(city_diff, prompt_lines, use_svg_icons=False):
+def build_email_table_html(city_diff, prompt_lines, use_svg_icons=False, include_license_col=False):
     """כתובת (carries all the icons - map/GovMap/plan/share/WhatsApp/AI),
     עצים לכריתה, ימים שנותרו and סיבת כריתה, right-to-left - the columns
     asked for in the email/PDF specifically (the website keeps the full
-    column set)."""
+    column set). include_license_col adds a מספר רישיון column (PDF only)."""
     rows_html = "".join(
-        build_email_row_html(row, prompt_lines, use_svg_icons=use_svg_icons) for _, row in city_diff.iterrows()
+        build_email_row_html(row, prompt_lines, use_svg_icons=use_svg_icons, include_license_col=include_license_col)
+        for _, row in city_diff.iterrows()
     )
+    license_header = "<th>מספר<br>רישיון</th>" if include_license_col else ""
     return f"""<table class="diff-table" dir="rtl">
     <thead><tr>
-        <th>כתובת</th><th>עצים<br>לכריתה</th><th>ימים<br>שנותרו</th><th>סיבת כריתה</th>
+        <th>כתובת</th><th>עצים<br>לכריתה</th><th>ימים<br>שנותרו</th><th>סיבת כריתה</th>{license_header}
     </tr></thead>
     <tbody>{rows_html}</tbody>
 </table>"""
 
 
 def build_pdf_cards_document(city_diff, prompt_lines, city_key):
-    """Same כתובת/עצים לכריתה/ימים שנותרו table (RTL, with the same shading)
-    as the email body, rendered as a standalone PDF page - with real
-    WhatsApp/Google-Maps/planning SVG icons instead of emoji, since
-    Chromium (which renders this PDF) supports inline SVG natively."""
-    table_html = build_email_table_html(city_diff, prompt_lines, use_svg_icons=True)
+    """Same כתובת/עצים לכריתה/ימים שנותרו/סיבת כריתה table (RTL, with the
+    same shading) as the email body, plus a מספר רישיון column, rendered as
+    a standalone PDF page - with real WhatsApp/Google-Maps/planning SVG
+    icons instead of emoji, since Chromium (which renders this PDF)
+    supports inline SVG natively."""
+    table_html = build_email_table_html(city_diff, prompt_lines, use_svg_icons=True, include_license_col=True)
+    generated_at = datetime.now().strftime("%d/%m/%Y %H:%M")
     return f"""<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -301,7 +326,9 @@ def build_pdf_cards_document(city_diff, prompt_lines, city_key):
 <style>{CARD_STYLE}</style>
 </head>
 <body>
+    <div class="brand">🌳🌿🌲 נאמני העצים 🌲🌿🌳</div>
     <h2>עדכון רישיונות כריתה - {html.escape(city_key)}</h2>
+    <p class="generated-at">הופק בתאריך {generated_at}</p>
     {table_html}
 </body>
 </html>"""
@@ -390,7 +417,7 @@ def send_admin_summary(sent):
 {EMAIL_STYLE}
 </style>
 </head>
-<body>
+<body dir="rtl">
     <div class="container">
         <h2>🌳 סיכום מיילים יומי - רישיונות כריתה</h2>
         {body_note}
@@ -457,7 +484,7 @@ def send_notifications(diff_df):
 {EMAIL_STYLE}
 </style>
 </head>
-<body>
+<body dir="rtl">
     <div class="container">
         {report_link_html}
         <h2>🌳 עדכון רישיונות כריתה - {city_key}</h2>
