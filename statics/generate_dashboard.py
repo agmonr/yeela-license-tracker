@@ -56,6 +56,29 @@ GOVMAP_URL_COL = "קישור ל-GovMap"
 
 COLORS = ["#4caf50", "#e05353", "#2ba8e0", "#f5a623", "#a1725c", "#2e8b57"]
 
+# Small inline-SVG brand icons (WhatsApp bubble, Google Maps pin, a
+# classical-building glyph for מנהל התכנון) instead of emoji, for the
+# site/PDF - both Chromium-rendered, so raw <svg> works natively. Email
+# stays on emoji (see notify_changes.py) since most clients strip inline
+# SVG/data-URI images.
+WHATSAPP_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<circle cx="12" cy="12" r="12" fill="#25D366"/>'
+    '<path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9a6.5 6.5 0 1 0 3.2-12.1zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.75l-.2-.1-1.9.5.5-1.85-.13-.2a5.3 5.3 0 0 1 4.43-8.2zm-2.9 2.9c-.13 0-.34.05-.52.25-.18.2-.68.66-.68 1.6s.7 1.86.8 2c.1.13 1.36 2.1 3.3 2.86 1.62.65 1.95.52 2.3.49.35-.03 1.13-.46 1.28-.9.15-.45.15-.83.1-.9-.05-.08-.18-.13-.38-.23-.2-.1-1.13-.56-1.3-.62-.18-.06-.3-.1-.44.1-.13.2-.5.62-.6.75-.1.13-.22.14-.4.05-.2-.1-.83-.3-1.58-.98-.58-.52-.98-1.15-1.1-1.35-.1-.2-.01-.3.09-.4.09-.1.2-.24.3-.36.1-.13.13-.2.2-.34.06-.13.03-.25-.02-.35-.05-.1-.44-1.08-.62-1.47-.16-.38-.32-.33-.44-.33h-.38z"/>'
+    "</svg>"
+)
+GOOGLE_MAPS_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<path fill="#4285F4" d="M12 2C7.6 2 4 5.6 4 10c0 5.4 6.7 11 7.3 11.5.2.15.4.2.7.2s.5-.05.7-.2C13.3 21 20 15.4 20 10c0-4.4-3.6-8-8-8z"/>'
+    '<circle cx="12" cy="10" r="3.2" fill="#fff"/>'
+    "</svg>"
+)
+PLANNING_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<path fill="#6d4c2f" d="M12 2 2 8h20L12 2zM4 10v9H2v2h20v-2h-2v-9h-2v9h-3v-9h-2v9h-2v-9H9v9H6v-9H4z"/>'
+    "</svg>"
+)
+
 # Warm, high-contrast "tree lovers" theme: forest greens, sunny amber and a
 # cream paper background, bigger type and rounder shapes than a typical
 # admin dashboard so it's comfortable for older/less tech-savvy readers.
@@ -1051,7 +1074,7 @@ def build_open_objections_report(latest_date, df):
         if pd.isna(plan_url) or not is_construction_reason(reason):
             return ""
         title = f' title="תוכנית {plan_number}"' if pd.notna(plan_number) else ' title="קישור למנהל התכנון"'
-        return f' <a href="{esc(plan_url)}" target="_blank" rel="noopener" class="map-icon"{title}>📋</a>'
+        return f' <a href="{esc(plan_url)}" target="_blank" rel="noopener" class="map-icon"{title}>{PLANNING_ICON_SVG}</a>'
 
     def maps_link(row, license_id):
         street = str(row.street).strip() if pd.notna(row.street) else ""
@@ -1062,7 +1085,7 @@ def build_open_objections_report(latest_date, df):
         google_url = f"https://www.google.com/maps/search/?api=1&query={query}"
         icons = (
             f'<a href="{google_url}" target="_blank" rel="noopener" '
-            f'class="map-icon" title="פתח ב-Google Maps">🗺️</a>'
+            f'class="map-icon" title="פתח ב-Google Maps">{GOOGLE_MAPS_ICON_SVG}</a>'
         )
         if pd.notna(row.govmap_url):
             icons += (
@@ -1161,7 +1184,7 @@ def build_open_objections_report(latest_date, df):
         lines_json = html.escape(json.dumps(whatsapp_lines(license_id, row), ensure_ascii=False), quote=True)
         return (
             f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" data-wa-lines="{lines_json}" '
-            f'onclick="return shareToWhatsapp(this, {int(license_id)})">💬</a>'
+            f'onclick="return shareToWhatsapp(this, {int(license_id)})">{WHATSAPP_ICON_SVG}</a>'
         )
 
     def build_row(license_id, row):
@@ -1414,6 +1437,10 @@ if (location.hash.startsWith('#license-')) {{
         row.scrollIntoView({{behavior: 'smooth', block: 'center'}});
         row.classList.add('shared-target');
     }}
+}} else if (location.hash.startsWith('#search-')) {{
+    const city = decodeURIComponent(location.hash.slice('#search-'.length).replace(/\\+/g, ' '));
+    document.getElementById('citySearch').value = city;
+    filterCities();
 }}
 </script>
 </body>

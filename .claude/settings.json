@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(crontab -l)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(source venv/bin/activate)",
+      "Bash(source /storage01/yeela-license-tracker/venv/bin/activate)"
     ]
   }
 }

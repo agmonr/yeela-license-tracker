@@ -34,6 +34,28 @@ PLAN_URL_COL = "קישור לתכנית"
 GOVMAP_URL_COL = "קישור ל-GovMap"
 CHANGE_TYPE_COL = "סוג שינוי"
 
+# Small inline-SVG brand icons for the PDF (Chromium-rendered via
+# mailer.render_pdf, so raw <svg> works natively) - same icons as
+# statics/generate_dashboard.py. The email body stays on emoji (💬/🗺️/📋)
+# since most mail clients strip inline SVG/data-URI images.
+WHATSAPP_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<circle cx="12" cy="12" r="12" fill="#25D366"/>'
+    '<path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9a6.5 6.5 0 1 0 3.2-12.1zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.75l-.2-.1-1.9.5.5-1.85-.13-.2a5.3 5.3 0 0 1 4.43-8.2zm-2.9 2.9c-.13 0-.34.05-.52.25-.18.2-.68.66-.68 1.6s.7 1.86.8 2c.1.13 1.36 2.1 3.3 2.86 1.62.65 1.95.52 2.3.49.35-.03 1.13-.46 1.28-.9.15-.45.15-.83.1-.9-.05-.08-.18-.13-.38-.23-.2-.1-1.13-.56-1.3-.62-.18-.06-.3-.1-.44.1-.13.2-.5.62-.6.75-.1.13-.22.14-.4.05-.2-.1-.83-.3-1.58-.98-.58-.52-.98-1.15-1.1-1.35-.1-.2-.01-.3.09-.4.09-.1.2-.24.3-.36.1-.13.13-.2.2-.34.06-.13.03-.25-.02-.35-.05-.1-.44-1.08-.62-1.47-.16-.38-.32-.33-.44-.33h-.38z"/>'
+    "</svg>"
+)
+GOOGLE_MAPS_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<path fill="#4285F4" d="M12 2C7.6 2 4 5.6 4 10c0 5.4 6.7 11 7.3 11.5.2.15.4.2.7.2s.5-.05.7-.2C13.3 21 20 15.4 20 10c0-4.4-3.6-8-8-8z"/>'
+    '<circle cx="12" cy="10" r="3.2" fill="#fff"/>'
+    "</svg>"
+)
+PLANNING_ICON_SVG = (
+    '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle">'
+    '<path fill="#6d4c2f" d="M12 2 2 8h20L12 2zM4 10v9H2v2h20v-2h-2v-9h-2v9h-3v-9h-2v9h-2v-9H9v9H6v-9H4z"/>'
+    "</svg>"
+)
+
 # Same mobile table (כתובת/עצים לכריתה/ימים שנותרו, RTL) as the email body
 # and statics/reports/open_for_objection.html, rendered to a standard A4
 # page (see mailer.py's render_pdf) instead of the stacked field-cards
@@ -44,6 +66,7 @@ CARD_STYLE = """
     table, .diff-table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 14px; direction: rtl; }
     th, td, .diff-table th, .diff-table td { border: 1px solid #dfe9d8; padding: 8px; text-align: right; direction: rtl; overflow-wrap: anywhere; }
     th, .diff-table th { background-color: #2e7d46; color: #fff; }
+    .diff-table th:nth-child(1), .diff-table td:nth-child(1) { width: 20ch; max-width: 20ch; white-space: normal; word-break: break-word; }
     tr { break-inside: avoid; page-break-inside: avoid; }
     a { color: #2ba8e0; }
 """
@@ -128,9 +151,10 @@ def whatsapp_message_lines(row, license_id, share_url):
     return lines
 
 
-def whatsapp_icon_link(row, license_id, share_url):
+def whatsapp_icon_link(row, license_id, share_url, use_svg_icons=False):
     text = quote_plus("\n".join(whatsapp_message_lines(row, license_id, share_url)))
-    return f'<a href="https://wa.me/?text={text}" target="_blank" rel="noopener">💬</a>'
+    label = WHATSAPP_ICON_SVG if use_svg_icons else "💬"
+    return f'<a href="https://wa.me/?text={text}" target="_blank" rel="noopener">{label}</a>'
 
 
 def maps_link(row, label="🗺️ מפה"):
@@ -145,13 +169,17 @@ def maps_link(row, label="🗺️ מפה"):
     return f'<a href="{url}" target="_blank" rel="noopener">{label}</a>'
 
 
-def address_cell(row, license_id, prompt_lines):
+def address_cell(row, license_id, prompt_lines, use_svg_icons=False):
     """Mirrors the כתובת cell on statics/reports/open_for_objection.html:
     address text (+ city in parens when there's a street), map/GovMap/plan
-    icons, a direct link to this license's row on the report page, a
+    icons, a link that searches the report page by ישוב name (diff rows
+    aren't necessarily "open for objection" status, so a #license-<id>
+    deep link could point at a row that isn't even on that page), a
     WhatsApp share carrying the full license details, and the AI
     objection-help search - all in one cell instead of spread across
-    separate columns/links."""
+    separate columns/links. use_svg_icons swaps emoji for the real
+    WhatsApp/Google-Maps/planning SVG icons (PDF only - email clients
+    strip inline SVG, so the email body stays on emoji)."""
     street = str(row.get(STREET_COL, "") or "").strip()
     city = str(row.get(CITY_COL, "") or "").strip()
     if not street and not city:
@@ -159,17 +187,22 @@ def address_cell(row, license_id, prompt_lines):
     display_address = street if street else city
     city_span = f" ({html.escape(city)})" if street else ""
 
-    icons_line1 = maps_link(row, label="🗺️")
+    maps_icon = GOOGLE_MAPS_ICON_SVG if use_svg_icons else "🗺️"
+    icons_line1 = maps_link(row, label=maps_icon)
     govmap_url = str(row.get(GOVMAP_URL_COL, "") or "").strip()
     if govmap_url:
         icons_line1 += " " + url_link(govmap_url, "🛰️")
     plan_url = str(row.get(PLAN_URL_COL, "") or "").strip()
     reason = str(row.get(REASON_COL, "") or "").strip()
     if plan_url and is_construction_reason(reason):
-        icons_line1 += " " + url_link(plan_url, "📋")
+        plan_icon = PLANNING_ICON_SVG if use_svg_icons else "📋"
+        icons_line1 += " " + url_link(plan_url, plan_icon)
 
-    share_url = f"{REPORTS_BASE_URL}open_for_objection.html#license-{license_id}"
-    icons_line2 = f'{url_link(share_url, "🔗")} {whatsapp_icon_link(row, license_id, share_url)}'
+    share_url = f"{REPORTS_BASE_URL}open_for_objection.html#search-{quote_plus(city)}"
+    icons_line2 = (
+        f'{url_link(share_url, "🔗")} '
+        f"{whatsapp_icon_link(row, license_id, share_url, use_svg_icons=use_svg_icons)}"
+    )
     ai_line = objection_search_link(row, prompt_lines, label="🤖")
 
     return f'{html.escape(display_address)}{city_span}<br>{icons_line1}<br>{icons_line2}<br>{ai_line}'
@@ -218,7 +251,7 @@ def email_days_left_text(days_left):
     return f"{days_left:,}"
 
 
-def build_email_row_html(row, prompt_lines):
+def build_email_row_html(row, prompt_lines, use_svg_icons=False):
     license_id = str(row.get(LICENSE_COL, "")).strip()
     days_left = parse_days_left(row.get(DEADLINE_COL, ""))
     try:
@@ -231,30 +264,36 @@ def build_email_row_html(row, prompt_lines):
 
     return (
         f"<tr{row_style}>"
-        f"<td>{address_cell(row, license_id, prompt_lines)}</td>"
+        f"<td>{address_cell(row, license_id, prompt_lines, use_svg_icons=use_svg_icons)}</td>"
         f'<td>{html.escape(str(row.get(CUT_COL, "")))}</td>'
         f"<td>{email_days_left_text(days_left)}</td>"
+        f"<td>{html.escape(str(row.get(REASON_COL, '')) or '—')}</td>"
         f"</tr>"
     )
 
 
-def build_email_table_html(city_diff, prompt_lines):
-    """Only כתובת (carries all the icons - map/GovMap/plan/share/WhatsApp/AI),
-    עצים לכריתה and ימים שנותרו, right-to-left, matching what was asked for
-    in the email specifically (the website/PDF keep the full column set)."""
-    rows_html = "".join(build_email_row_html(row, prompt_lines) for _, row in city_diff.iterrows())
+def build_email_table_html(city_diff, prompt_lines, use_svg_icons=False):
+    """כתובת (carries all the icons - map/GovMap/plan/share/WhatsApp/AI),
+    עצים לכריתה, ימים שנותרו and סיבת כריתה, right-to-left - the columns
+    asked for in the email/PDF specifically (the website keeps the full
+    column set)."""
+    rows_html = "".join(
+        build_email_row_html(row, prompt_lines, use_svg_icons=use_svg_icons) for _, row in city_diff.iterrows()
+    )
     return f"""<table class="diff-table" dir="rtl">
     <thead><tr>
-        <th>כתובת</th><th>עצים<br>לכריתה</th><th>ימים<br>שנותרו</th>
+        <th>כתובת</th><th>עצים<br>לכריתה</th><th>ימים<br>שנותרו</th><th>סיבת כריתה</th>
     </tr></thead>
     <tbody>{rows_html}</tbody>
 </table>"""
 
 
 def build_pdf_cards_document(city_diff, prompt_lines, city_key):
-    """Same כתובת/עצים לכריתה/ימים שנותרו table (RTL, with the same icon
-    links and shading) as the email body, rendered as a standalone PDF page."""
-    table_html = build_email_table_html(city_diff, prompt_lines)
+    """Same כתובת/עצים לכריתה/ימים שנותרו table (RTL, with the same shading)
+    as the email body, rendered as a standalone PDF page - with real
+    WhatsApp/Google-Maps/planning SVG icons instead of emoji, since
+    Chromium (which renders this PDF) supports inline SVG natively."""
+    table_html = build_email_table_html(city_diff, prompt_lines, use_svg_icons=True)
     return f"""<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>

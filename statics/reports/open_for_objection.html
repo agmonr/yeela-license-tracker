@@ -158,7 +158,7 @@
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך 2026-07-23 &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="report_2026-07-23.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="orphaned_cities.html">יישובים "יתומים"</a> &middot; <a href="index.html">כל הדוחות</a></p>
-        <p class="page-created">דף נוצר ב-23/07/2026 08:47</p>
+        <p class="page-created">דף נוצר ב-23/07/2026 09:13</p>
     </header>
 
     <div class="panel explain">
@@ -225,7 +225,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-23/07/2026 08:47.<br>
+        נוצר אוטומטית ב-23/07/2026 09:13.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
@@ -376,6 +376,10 @@ if (location.hash.startsWith('#license-')) {
         row.scrollIntoView({behavior: 'smooth', block: 'center'});
         row.classList.add('shared-target');
     }
+} else if (location.hash.startsWith('#search-')) {
+    const city = decodeURIComponent(location.hash.slice('#search-'.length).replace(/\+/g, ' '));
+    document.getElementById('citySearch').value = city;
+    filterCities();
 }
 </script>
 </body>

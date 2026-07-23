@@ -18,6 +18,7 @@ EMAIL_STYLE = """
     table, .diff-table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; direction: rtl; }
     th, td, .diff-table th, .diff-table td { border: 1px solid #dfe9d8; padding: 10px 8px; text-align: right; direction: rtl; }
     th, .diff-table th { background-color: #2e7d46; color: #fff; white-space: nowrap; }
+    .diff-table th:nth-child(1), .diff-table td:nth-child(1) { width: 20ch; max-width: 20ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
     tr:nth-child(even) { background-color: #f5f9f1; }
     .status-new { color: #2e7d46; font-weight: bold; }
     .status-removed { color: #e05353; font-weight: bold; }
