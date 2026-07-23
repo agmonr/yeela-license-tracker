@@ -1070,9 +1070,12 @@ def build_open_objections_report(latest_date, df):
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
         icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
-        icons += f' {share_link(license_id)} {whatsapp_share_link(license_id)}'
+        share_icons = f'{whatsapp_share_link(license_id)} {share_link(license_id)}'
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
-        return f'{esc(display_address)}{city_span}<br>{icons}<br>{ai_icon_link(license_id, row)}'
+        return (
+            f'{esc(display_address)}{city_span}<br>{icons}'
+            f'<br>{share_icons}<br>{ai_icon_link(license_id, row)}'
+        )
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1200,6 +1203,7 @@ def build_open_objections_report(latest_date, df):
     .page-created {{ color: var(--border); font-size: 10px; }}
     .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; }}
     #cityTable td {{ border-bottom-color: #aaa; }}
+    #cityTable th {{ text-align: center; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
