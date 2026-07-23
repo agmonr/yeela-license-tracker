@@ -1023,23 +1023,13 @@ def build_open_objections_report(latest_date, df):
         text = str(reason) if pd.notna(reason) else ""
         return "בנייה" in text or "ופיתוח" in text
 
-    def format_gush_helka(gush, helka, plan_number, plan_url, reason):
+    def format_gush_helka(gush, helka):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
         full_text = f"{gush}/{helka}"
-        truncated = len(full_text) > 20
-        label = esc(full_text[:20] + "…") if truncated else esc(full_text)
-        # מידע תכנוני (the plan link) only makes sense when the request
-        # itself is for בנייה/פיתוח - a safety/disease/infrastructure
-        # felling reason has no planning angle worth surfacing here.
-        show_plan = pd.notna(plan_url) and is_construction_reason(reason)
-        title_parts = [full_text] if truncated else []
-        if show_plan and pd.notna(plan_number):
-            title_parts.append(f"תוכנית {plan_number}")
-        title = f' title="{esc(" · ".join(title_parts))}"' if title_parts else ""
-        if show_plan:
-            return f'<a href="{esc(plan_url)}" target="_blank" rel="noopener"{title}>{label}</a>'
-        return f'<span{title}>{label}</span>' if title else label
+        if len(full_text) > 20:
+            return f'<span title="{esc(full_text)}">{esc(full_text[:20])}…</span>'
+        return esc(full_text)
 
     def format_days_left(days):
         if pd.isna(days):
@@ -1054,8 +1044,18 @@ def build_open_objections_report(latest_date, df):
     def iso_or_sentinel(dt):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
-    def maps_link(street, city, govmap_url, license_id):
-        street = str(street).strip() if pd.notna(street) else ""
+    def plan_icon_link(plan_url, plan_number, reason):
+        # מידע תכנוני (the plan link) only makes sense when the request
+        # itself is for בנייה/פיתוח - a safety/disease/infrastructure
+        # felling reason has no planning angle worth surfacing here.
+        if pd.isna(plan_url) or not is_construction_reason(reason):
+            return ""
+        title = f' title="תוכנית {plan_number}"' if pd.notna(plan_number) else ' title="קישור למנהל התכנון"'
+        return f' <a href="{esc(plan_url)}" target="_blank" rel="noopener" class="map-icon"{title}>📋</a>'
+
+    def maps_link(row, license_id):
+        street = str(row.street).strip() if pd.notna(row.street) else ""
+        city = row.city
         display_address = street if street else city
         full_address = f"{street}, {city}" if street else city
         query = quote_plus(f"{full_address}, ישראל")
@@ -1064,14 +1064,15 @@ def build_open_objections_report(latest_date, df):
             f'<a href="{google_url}" target="_blank" rel="noopener" '
             f'class="map-icon" title="פתח ב-Google Maps">🗺️</a>'
         )
-        if pd.notna(govmap_url):
+        if pd.notna(row.govmap_url):
             icons += (
-                f' <a href="{esc(govmap_url)}" target="_blank" rel="noopener" '
+                f' <a href="{esc(row.govmap_url)}" target="_blank" rel="noopener" '
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
-        icons += f' {share_link(license_id)}'
+        icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
+        icons += f' {share_link(license_id)} {whatsapp_share_link(license_id)}'
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
-        return f'{esc(display_address)}{city_span}<br>{icons}'
+        return f'{esc(display_address)}{city_span}<br>{icons}<br>{ai_icon_link(license_id, row)}'
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1097,18 +1098,10 @@ def build_open_objections_report(latest_date, df):
         clean_terms = [str(t).strip() for t in data_lines if str(t).strip()]
         return html.escape(json.dumps(clean_terms, ensure_ascii=False), quote=True)
 
-    def objection_help_link(license_id, row):
+    def ai_icon_link(license_id, row):
         return (
-            f'<a href="#" class="ai-prompt-link" data-terms="{data_terms(license_id, row)}" '
-            f'onclick="return openObjectionSearch(this)">{int(license_id):,}</a>'
-        )
-
-    def reason_search_link(license_id, row):
-        if not row.reason:
-            return "—"
-        return (
-            f'<a href="#" class="ai-prompt-link" data-terms="{data_terms(license_id, row)}" '
-            f'onclick="return openObjectionSearch(this)">{esc(row.reason)}</a>'
+            f'<a href="#" class="ai-prompt-link share-icon" data-terms="{data_terms(license_id, row)}" '
+            f'title="עזרה בהגשת השגה (AI)" onclick="return openObjectionSearch(this)">🤖</a>'
         )
 
     def deadline_bg(days_left, trees_to_cut):
@@ -1137,6 +1130,12 @@ def build_open_objections_report(latest_date, df):
             f'onclick="return copyShareLink({int(license_id)})">🔗</a>'
         )
 
+    def whatsapp_share_link(license_id):
+        return (
+            f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" '
+            f'onclick="return shareToWhatsapp({int(license_id)})">💬</a>'
+        )
+
     def build_row(license_id, row):
         bg = deadline_bg(row.days_left, row.trees_to_cut)
         row_style = f' style="background-color:{bg}"' if bg else ""
@@ -1144,15 +1143,15 @@ def build_open_objections_report(latest_date, df):
         return (
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
-            f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row.street, row.city, row.govmap_url, license_id)}</td>'
-            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>'
-            f"<td>{reason_search_link(license_id, row)}</td>"
+            f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row, license_id)}</td>'
+            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka)}</td>'
+            f"<td>{esc(row.reason) if row.reason else '—'}</td>"
             f"<td>{esc(row.species)}</td>"
             f"<td>{int(row.trees_to_cut):,}</td>"
             f"<td>{esc(row.applicant)}</td>"
             f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
             f"<td>{format_days_left(row.days_left)}</td>"
-            f"<td>{objection_help_link(license_id, row)}</td></tr>"
+            f"<td>{int(license_id):,}</td></tr>"
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
@@ -1200,11 +1199,14 @@ def build_open_objections_report(latest_date, df):
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
     .page-created {{ color: var(--border); font-size: 10px; }}
     .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; }}
+    #cityTable td {{ border-bottom-color: #aaa; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
     tr.link-copied {{ background-color: #fff3cd; transition: background-color 0.3s; }}
     tr.link-copied .frozen-col {{ background-color: #fff3cd; }}
+    tr.shared-target {{ outline: 3px solid #ff9800; outline-offset: -2px; }}
+    tr.shared-target td {{ background-color: #fff3cd !important; }}
     @media print {{
         .toolbar {{ display: none !important; }}
         thead th {{ position: static; box-shadow: none; }}
@@ -1242,7 +1244,7 @@ def build_open_objections_report(latest_date, df):
         <div class="explain-header">
             <h2>איך משתמשים בקישורים בטבלה</h2>
         </div>
-        <p>לחיצה על <strong>מספר הרישיון</strong> תפתח חיפוש בגוגל, כולל ההנחיה שלמעלה. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם. לחיצה על <strong>הכתובת</strong> תפתח את המיקום ב-Google Maps, כדי שתוכלו לראות את המקום בפועל.</p>
+        <p>בשורת ה<strong>כתובת</strong> שבטבלה: 🗺️ פותח את המיקום ב-Google Maps, 🛰️ פותח תצלום אוויר ב-GovMap, 📋 פותח את התוכנית ב-מנהל התכנון (כשקיימת), 🔗 מעתיק קישור ישיר לרישיון הזה, 💬 משתף אותו בוואטסאפ, ו-🤖 פותח חיפוש בגוגל כולל ההנחיה שלמעלה לעזרה בהגשת השגה. אם אתם מחוברים לחשבון גוגל, לחצו על הלשונית "AI" בתוצאות החיפוש ופעלו לפי ההנחיות שם.</p>
     </div>
 
     <div class="cards">
@@ -1304,6 +1306,12 @@ function copyShareLink(id) {{
     navigator.clipboard.writeText(url).then(() => {{
         highlightLicenseRow(id);
     }});
+    return false;
+}}
+
+function shareToWhatsapp(id) {{
+    const url = window.location.href.split('#')[0] + '#license-' + id;
+    window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank', 'noopener');
     return false;
 }}
 
@@ -1372,7 +1380,7 @@ if (location.hash.startsWith('#license-')) {{
     const row = document.querySelector(location.hash);
     if (row) {{
         row.scrollIntoView({{behavior: 'smooth', block: 'center'}});
-        highlightLicenseRow(location.hash.slice('#license-'.length));
+        row.classList.add('shared-target');
     }}
 }}
 </script>
