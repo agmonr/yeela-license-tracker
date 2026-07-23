@@ -1149,7 +1149,7 @@ def build_open_objections_report(latest_date, df):
             f"<td>{esc(row.applicant)}</td>"
             f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
             f"<td>{format_days_left(row.days_left)}</td>"
-            f"<td>{objection_help_link(license_id, row)} {share_link(license_id)}</td></tr>"
+            f'<td>{objection_help_link(license_id, row)}<span class="mobile-break"></span>{share_link(license_id)}</td></tr>'
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
@@ -1184,10 +1184,15 @@ def build_open_objections_report(latest_date, df):
     .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
     .frozen-col-2 {{ right: 100px; width: 13ch; min-width: 13ch; max-width: 13ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
     .city-inline {{ display: none; }}
+    .mobile-break {{ display: none; }}
+    @media (min-width: 900px) {{
+        .table-scroll {{ max-height: 85vh; }}
+    }}
     @media (max-width: 640px) {{
         .frozen-col-1 {{ display: none; }}
-        .frozen-col-2 {{ right: 0; }}
+        .frozen-col-2 {{ right: 0; width: 13ch; min-width: 13ch; max-width: 13ch; }}
         .city-inline {{ display: inline; }}
+        .mobile-break {{ display: block; }}
     }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
@@ -1214,7 +1219,6 @@ def build_open_objections_report(latest_date, df):
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
-        <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
         <p class="page-created">דף נוצר ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}</p>
     </header>
 
