@@ -1184,7 +1184,7 @@ def build_open_objections_report(latest_date, df):
     def share_link(license_id, city):
         return (
             f'<a href="#" class="share-icon" title="העתקת קישור לרישיון זה" '
-            f'onclick="return copyShareLink({int(license_id)}, {json.dumps(city)})">🔗</a>'
+            f'onclick="return copyShareLink({int(license_id)}, {html.escape(json.dumps(city), quote=True)})">🔗</a>'
         )
 
     def whatsapp_lines(license_id, row):
@@ -1209,7 +1209,7 @@ def build_open_objections_report(latest_date, df):
         lines_json = html.escape(json.dumps(whatsapp_lines(license_id, row), ensure_ascii=False), quote=True)
         return (
             f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" data-wa-lines="{lines_json}" '
-            f'onclick="return shareToWhatsapp(this, {int(license_id)}, {json.dumps(row.city)})">{WHATSAPP_ICON_SVG}</a>'
+            f'onclick="return shareToWhatsapp(this, {int(license_id)}, {html.escape(json.dumps(row.city), quote=True)})">{WHATSAPP_ICON_SVG}</a>'
         )
 
     def build_row(license_id, row):
@@ -1430,6 +1430,7 @@ def build_open_objections_report(latest_date, df):
                 {city_options}
             </select>
             <button type="button" class="clear-btn" title="נקה סינון" onclick="clearCityFilter()">✕ נקה</button>
+            <button type="button" class="clear-btn" title="שיתוף חיפוש זה" onclick="shareSearchTerm()">🔗 שתף</button>
             <span id="cityCount"></span>
         </div>
         <div class="table-scroll">
@@ -1549,6 +1550,13 @@ function clearCityFilter() {{
     document.getElementById('citySearch').value = '';
     document.getElementById('cityFilter').value = '';
     filterCities();
+}}
+
+function shareSearchTerm() {{
+    const term = document.getElementById('citySearch').value.trim();
+    if (!term) return;
+    const url = window.location.href.split('#')[0] + '#search-' + encodeURIComponent(term);
+    navigator.clipboard.writeText(url);
 }}
 
 if (location.hash.startsWith('#license-')) {{
