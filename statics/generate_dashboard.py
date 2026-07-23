@@ -1069,7 +1069,8 @@ def build_open_objections_report(latest_date, df):
                 f' <a href="{esc(govmap_url)}" target="_blank" rel="noopener" '
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
-        return f'{esc(display_address)}<br>{icons}'
+        city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
+        return f'{esc(display_address)}{city_span}<br>{icons}'
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1115,16 +1116,16 @@ def build_open_objections_report(latest_date, df):
         days_left = max(0, int(days_left))
         max_days = 30
         t = min(days_left, max_days) / max_days
-        pink = (255, 210, 220)
+        grey = (225, 225, 225)
         white = (255, 255, 255)
-        r = pink[0] + (white[0] - pink[0]) * t
-        g = pink[1] + (white[1] - pink[1]) * t
-        b = pink[2] + (white[2] - pink[2]) * t
+        r = grey[0] + (white[0] - grey[0]) * t
+        g = grey[1] + (white[1] - grey[1]) * t
+        b = grey[2] + (white[2] - grey[2]) * t
         if pd.notna(trees_to_cut) and trees_to_cut > 3:
             extra = 0.15
-            r += (pink[0] - r) * extra
-            g += (pink[1] - g) * extra
-            b += (pink[2] - b) * extra
+            r += (grey[0] - r) * extra
+            g += (grey[1] - g) * extra
+            b += (grey[2] - b) * extra
         return f"rgb({round(r)},{round(g)},{round(b)})"
 
     def share_link(license_id):
@@ -1181,10 +1182,17 @@ def build_open_objections_report(latest_date, df):
        through the rest of this wide table horizontally. */
     .frozen-col {{ position: sticky; background-color: var(--card); }}
     .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
-    .frozen-col-2 {{ right: 100px; width: 15ch; min-width: 15ch; max-width: 15ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
+    .frozen-col-2 {{ right: 100px; width: 13ch; min-width: 13ch; max-width: 13ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
+    .city-inline {{ display: none; }}
+    @media (max-width: 640px) {{
+        .frozen-col-1 {{ display: none; }}
+        .frozen-col-2 {{ right: 0; }}
+        .city-inline {{ display: inline; }}
+    }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
+    .page-created {{ color: var(--border); font-size: 10px; }}
     .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
     .collapsible summary {{ cursor: pointer; }}
@@ -1207,6 +1215,7 @@ def build_open_objections_report(latest_date, df):
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך {latest_date} &middot; {build_nav_links(latest_date)}</p>
         <button class="print-btn" onclick="window.print()">ייצוא כ-PDF (הדפסה)</button>
+        <p class="page-created">דף נוצר ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}</p>
     </header>
 
     <div class="panel explain">
