@@ -1266,6 +1266,12 @@ def build_open_objections_report(latest_date, df):
     }}
     @media (max-width: 640px) {{
         .city-inline {{ display: block; }}
+        /* Mobile: the search toolbar + license cards are the reason
+           anyone opens this page, so they move above the header/
+           explanation panels instead of making people scroll past those
+           first. */
+        .container {{ display: flex; flex-direction: column; }}
+        .table-panel {{ order: -1; }}
         /* Below 640px the table becomes a stack of license cards: the
            כתובת cell (address + mobile-facts + מידע/הפצה/פעולה sections,
            see maps_link()) is the only visible cell per row - everything

@@ -125,6 +125,12 @@
     }
     @media (max-width: 640px) {
         .city-inline { display: block; }
+        /* Mobile: the search toolbar + license cards are the reason
+           anyone opens this page, so they move above the header/
+           explanation panels instead of making people scroll past those
+           first. */
+        .container { display: flex; flex-direction: column; }
+        .table-panel { order: -1; }
         /* Below 640px the table becomes a stack of license cards: the
            כתובת cell (address + mobile-facts + מידע/הפצה/פעולה sections,
            see maps_link()) is the only visible cell per row - everything
@@ -220,7 +226,7 @@
         <p class="subtitle">פרויקט של רם אגמון, הוד השרון, עבור נאמני העצים, הצטרפו לנאמני העצים</p>
         <p class="subtitle">האתר בהרצה, עלולות להיות טעויות</p>
         <p>נתונים נכון לתאריך 2026-07-23 &middot; <a href="open_for_objection.html">פתוחים להגשת השגה</a> &middot; <a href="report_2026-07-23.html">הדוח המלא</a> &middot; <a href="objections.html">דו"ח היענות הרשות</a> &middot; <a href="by_city.html">דוח לפי יישוב</a> &middot; <a href="orphaned_cities.html">יישובים "יתומים"</a> &middot; <a href="index.html">כל הדוחות</a></p>
-        <p class="page-created">דף נוצר ב-23/07/2026 11:08</p>
+        <p class="page-created">דף נוצר ב-23/07/2026 11:28</p>
     </header>
 
     <div class="panel explain">
@@ -288,7 +294,7 @@
     </div>
 
     <footer>
-        נוצר אוטומטית ב-23/07/2026 11:08.<br>
+        נוצר אוטומטית ב-23/07/2026 11:28.<br>
         נוצר על ידי רם אגמון, הוד השרון.
     </footer>
 </div>
