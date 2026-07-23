@@ -74,8 +74,7 @@ CARD_STYLE = """
     .lic-header { padding: 14px 16px; background: #fff; border-bottom: 2px solid #dfe9d8; }
     .lic-header .addr { font-size: 24px; font-weight: 700; color: #1b5e34; }
     .lic-header .sub { font-size: 17px; color: #5b6f56; margin-top: 2px; }
-    .header-facts { margin-top: 10px; }
-    .header-facts span { display: inline-block; margin-inline-end: 20px; margin-bottom: 4px; }
+    .header-facts { margin-top: 10px; line-height: 1.9; }
     .field-label { color: #5b6f56; font-size: 16px; margin-inline-end: 4px; }
     .field-value { font-weight: 600; }
     .section { padding: 12px 16px; border-bottom: 1px solid #dfe9d8; break-inside: avoid; page-break-inside: avoid; }
@@ -263,8 +262,8 @@ def build_license_card_html(row, prompt_lines, use_svg_icons=False):
     gush_helka = f"{gush}/{helka}" if gush and helka else "—"
     reason = str(row.get(REASON_COL, "") or "").strip() or "—"
 
-    facts = "".join(
-        f'<span><span class="field-label">{label}</span><span class="field-value">{value}</span></span>'
+    facts = "&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;".join(
+        f'<span class="field-label">{label}:</span>&nbsp;<span class="field-value">{value}</span>'
         for label, value in [
             ("גוש/חלקה", html.escape(gush_helka)),
             ("סיבת כריתה", html.escape(reason)),

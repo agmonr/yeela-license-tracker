@@ -12,7 +12,7 @@ SENDMAIL = "/usr/sbin/sendmail"
 # hex colors and only the system font stack.
 EMAIL_STYLE = """
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f2f7ee; padding: 20px; color: #24331f; }
-    .container { background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(27,94,52,0.12); border-top: 6px solid #2e7d46; }
+    .container { max-width: 720px; margin: 0 auto; background-color: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(27,94,52,0.12); border-top: 6px solid #2e7d46; }
     h2 { color: #1b5e34; border-bottom: 3px solid #a5d6a7; padding-bottom: 10px; }
     h3 { color: #1b5e34; margin-top: 25px; }
     table, .diff-table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 13px; direction: rtl; }
@@ -32,8 +32,7 @@ EMAIL_STYLE = """
     .lic-header { padding: 12px 14px; background: #fff; border-bottom: 2px solid #dfe9d8; }
     .lic-header .addr { font-size: 16px; font-weight: 700; color: #1b5e34; }
     .lic-header .sub { font-size: 12.5px; color: #5b6f56; margin-top: 2px; }
-    .header-facts { margin-top: 8px; font-size: 13px; }
-    .header-facts span { display: inline-block; margin-inline-end: 16px; margin-bottom: 4px; }
+    .header-facts { margin-top: 8px; font-size: 13px; line-height: 1.8; }
     .field-label { color: #5b6f56; font-size: 12px; margin-inline-end: 4px; }
     .field-value { font-weight: 600; }
     .section { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #dfe9d8; }

@@ -149,6 +149,8 @@ BASE_CSS = """
     .note { color: var(--ink-soft); font-size: 14px; margin: 0 0 15px; }
     .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
     #citySearch { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; width: 260px; max-width: 100%; }
+    .search-wrap { display: contents; }
+    .search-label { display: none; }
     #cityFilter { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; max-width: 100%; }
     .clear-btn { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 14px; background: #fff; color: var(--ink-soft); cursor: pointer; }
     .clear-btn:hover { background: #f7fbf4; border-color: var(--leaf-light); color: var(--forest-dark); }
@@ -1095,7 +1097,7 @@ def build_open_objections_report(latest_date, df):
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
         info_icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
-        spread_icons = f'{share_link(license_id)} {whatsapp_share_link(license_id, row)}'
+        spread_icons = f'{share_link(license_id, row.city)} {whatsapp_share_link(license_id, row)}'
         action_icon = ai_icon_link(license_id, row)
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
 
@@ -1179,10 +1181,10 @@ def build_open_objections_report(latest_date, df):
             b += (brown[2] - b) * extra
         return f"rgb({round(r)},{round(g)},{round(b)})"
 
-    def share_link(license_id):
+    def share_link(license_id, city):
         return (
             f'<a href="#" class="share-icon" title="העתקת קישור לרישיון זה" '
-            f'onclick="return copyShareLink({int(license_id)})">🔗</a>'
+            f'onclick="return copyShareLink({int(license_id)}, {json.dumps(city)})">🔗</a>'
         )
 
     def whatsapp_lines(license_id, row):
@@ -1207,7 +1209,7 @@ def build_open_objections_report(latest_date, df):
         lines_json = html.escape(json.dumps(whatsapp_lines(license_id, row), ensure_ascii=False), quote=True)
         return (
             f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" data-wa-lines="{lines_json}" '
-            f'onclick="return shareToWhatsapp(this, {int(license_id)})">{WHATSAPP_ICON_SVG}</a>'
+            f'onclick="return shareToWhatsapp(this, {int(license_id)}, {json.dumps(row.city)})">{WHATSAPP_ICON_SVG}</a>'
         )
 
     def build_row(license_id, row):
@@ -1266,6 +1268,21 @@ def build_open_objections_report(latest_date, df):
     }}
     @media (max-width: 640px) {{
         .city-inline {{ display: block; }}
+        /* Mobile: merge the free-text search and the city dropdown into
+           one field - the dropdown is redundant screen space on a small
+           display since typing already searches city name (among other
+           things); a fixed "שם העיר" label sits on the field's right
+           (leading) edge instead of the dropdown's placeholder option. */
+        .search-wrap {{
+            display: flex; align-items: center; gap: 8px; flex: 1;
+            border: 2px solid var(--border); border-radius: 10px; padding: 0 14px;
+            background: var(--card);
+        }}
+        .search-label {{ display: inline; font-size: 13px; color: var(--ink-soft); white-space: nowrap; }}
+        #citySearch {{ flex: 1; border: none; padding: 10px 0; width: auto; }}
+        #citySearch:focus {{ outline: none; }}
+        .search-wrap:focus-within {{ outline: 3px solid var(--leaf-light); border-color: var(--forest); }}
+        #cityFilter {{ display: none; }}
         /* Mobile: the search toolbar + license cards are the reason
            anyone opens this page, so they move above the header/
            explanation panels instead of making people scroll past those
@@ -1280,8 +1297,9 @@ def build_open_objections_report(latest_date, df):
         #cityTable, #cityTable tbody {{ display: block; width: 100%; }}
         #cityTable thead {{ display: none; }}
         #cityTable tr {{
-            display: block; border: 1px solid var(--border); border-radius: 12px;
+            display: block; border: 2px solid var(--border); border-radius: 12px;
             margin-bottom: 14px; overflow: hidden; background: var(--card);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
         }}
         #cityTable td:not(.frozen-col-2) {{ display: none; }}
         .frozen-col-1 {{ display: none; }}
@@ -1400,17 +1418,16 @@ def build_open_objections_report(latest_date, df):
 
     <div class="panel table-panel">
         <div class="toolbar">
-            <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
+            <div class="search-wrap">
+                <span class="search-label">שם העיר</span>
+                <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
+            </div>
             <select id="cityFilter" onchange="document.getElementById('citySearch').value = this.value; filterCities();">
                 <option value="">כל היישובים</option>
                 {city_options}
             </select>
             <button type="button" class="clear-btn" title="נקה סינון" onclick="clearCityFilter()">✕ נקה</button>
             <span id="cityCount"></span>
-            <div class="toolbar-actions">
-                <button class="export-btn" onclick="downloadCSV('cityTable', 'open_for_objection_{latest_date}.csv')">הורדה כ-CSV</button>
-                <button class="export-btn" onclick="downloadExcel('cityTable', 'open_for_objection_{latest_date}.xls')">הורדה כ-Excel</button>
-            </div>
         </div>
         <div class="table-scroll">
         <table id="cityTable" data-sort-col="3" data-sort-dir="asc">
@@ -1447,16 +1464,20 @@ function resetAiPrompt() {{
     document.getElementById('aiPromptField').value = DEFAULT_AI_PROMPT;
 }}
 
-function copyShareLink(id) {{
-    const url = window.location.href.split('#')[0] + '#license-' + id;
+function shareUrlFor(id, city) {{
+    return window.location.href.split('#')[0] + '#license-' + id + '~' + encodeURIComponent(city);
+}}
+
+function copyShareLink(id, city) {{
+    const url = shareUrlFor(id, city);
     navigator.clipboard.writeText(url).then(() => {{
         highlightLicenseRow(id);
     }});
     return false;
 }}
 
-function shareToWhatsapp(link, id) {{
-    const url = window.location.href.split('#')[0] + '#license-' + id;
+function shareToWhatsapp(link, id, city) {{
+    const url = shareUrlFor(id, city);
     const lines = JSON.parse(link.dataset.waLines);
     lines.push('קישור: ' + url);
     window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\\n')), '_blank', 'noopener');
@@ -1528,10 +1549,29 @@ function clearCityFilter() {{
 }}
 
 if (location.hash.startsWith('#license-')) {{
-    const row = document.querySelector(location.hash);
+    // Shared links carry the city after a '~' (see shareUrlFor) so that if
+    // the license has since left this report (status changed, no longer
+    // "open for objection"), the link still lands somewhere useful instead
+    // of a dead anchor - it falls back to searching that city.
+    const [idPart, cityPart] = location.hash.slice(1).split('~');
+    const row = document.getElementById(idPart);
     if (row) {{
         row.scrollIntoView({{behavior: 'smooth', block: 'center'}});
         row.classList.add('shared-target');
+        // scrollIntoView only guarantees centering within the nearest
+        // scroll container (.table-scroll, capped at 70vh on mobile) -
+        // nudge the outer page too so the card lands mid-screen, not just
+        // mid-box.
+        setTimeout(() => {{
+            const rect = row.getBoundingClientRect();
+            const offset = rect.top - (window.innerHeight / 2 - rect.height / 2);
+            if (Math.abs(offset) > 4) {{
+                window.scrollBy({{top: offset, behavior: 'smooth'}});
+            }}
+        }}, 400);
+    }} else if (cityPart) {{
+        document.getElementById('citySearch').value = decodeURIComponent(cityPart);
+        filterCities();
     }}
 }} else if (location.hash.startsWith('#search-')) {{
     const city = decodeURIComponent(location.hash.slice('#search-'.length).replace(/\\+/g, ' '));
