@@ -150,6 +150,8 @@ BASE_CSS = """
     .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
     #citySearch { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; width: 260px; max-width: 100%; }
     #cityFilter { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; max-width: 100%; }
+    .clear-btn { padding: 10px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 14px; background: #fff; color: var(--ink-soft); cursor: pointer; }
+    .clear-btn:hover { background: #f7fbf4; border-color: var(--leaf-light); color: var(--forest-dark); }
     #citySearch:focus, #cityFilter:focus { outline: 3px solid var(--leaf-light); border-color: var(--forest); }
     #cityCount { color: var(--ink-soft); font-size: 14px; }
     .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1083,22 +1085,43 @@ def build_open_objections_report(latest_date, df):
         full_address = f"{street}, {city}" if street else city
         query = quote_plus(f"{full_address}, ישראל")
         google_url = f"https://www.google.com/maps/search/?api=1&query={query}"
-        icons = (
+        info_icons = (
             f'<a href="{google_url}" target="_blank" rel="noopener" '
             f'class="map-icon" title="פתח ב-Google Maps">{GOOGLE_MAPS_ICON_SVG}</a>'
         )
         if pd.notna(row.govmap_url):
-            icons += (
+            info_icons += (
                 f' <a href="{esc(row.govmap_url)}" target="_blank" rel="noopener" '
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
-        icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
-        share_icons = f'{whatsapp_share_link(license_id, row)} {share_link(license_id)}'
+        info_icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
+        spread_icons = f'{share_link(license_id)} {whatsapp_share_link(license_id, row)}'
+        action_icon = ai_icon_link(license_id, row)
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
-        addr_break = '<br class="addr-break">' if street else "<br>"
+
+        # Mobile-only facts (license number + gush/helka/reason/trees/days-left)
+        # duplicated here from their own sortable columns, so the mobile card
+        # can show them right under the address without needing to reorder
+        # table cells across columns (not possible with pure CSS).
+        mobile_facts = (
+            f'<div class="mobile-facts">'
+            f'<span class="fact-label">מספר רישיון</span><span class="fact-value">{int(license_id):,}</span>'
+            f'<span class="fact-label">גוש/חלקה</span><span class="fact-value">{format_gush_helka(row.gush, row.helka)}</span>'
+            f'<span class="fact-label">סיבת כריתה</span><span class="fact-value">{esc(row.reason) if row.reason else "—"}</span>'
+            f'<span class="fact-label">עצים לכריתה</span><span class="fact-value">{int(row.trees_to_cut):,}</span>'
+            f'<span class="fact-label">ימים שנותרו</span><span class="fact-value">{format_days_left(row.days_left)}</span>'
+            f'</div>'
+        )
+
         return (
-            f'{esc(display_address)}{city_span}{addr_break}{icons}'
-            f'<br>{share_icons}<br>{ai_icon_link(license_id, row)}'
+            f'<div class="addr-line">{esc(display_address)}{city_span}</div>'
+            f'{mobile_facts}'
+            f'<div class="icon-section icon-section-info"><span class="icon-section-tag">מידע</span>'
+            f'<span class="icon-section-icons">{info_icons}</span></div>'
+            f'<div class="icon-section icon-section-spread"><span class="icon-section-tag">הפצה</span>'
+            f'<span class="icon-section-icons">{spread_icons}</span></div>'
+            f'<div class="icon-section icon-section-action"><span class="icon-section-tag">פעולה</span>'
+            f'<span class="icon-section-icons">{action_icon}</span></div>'
         )
 
     config = configparser.ConfigParser()
@@ -1242,11 +1265,24 @@ def build_open_objections_report(latest_date, df):
         .table-panel {{ position: sticky; top: 0; z-index: 25; background-color: var(--card); }}
     }}
     @media (max-width: 640px) {{
-        .frozen-col-1 {{ display: none; }}
-        .frozen-col-2 {{ right: 0; width: 10ch; min-width: 10ch; max-width: 10ch; }}
         .city-inline {{ display: block; }}
-        .addr-break {{ display: none; }}
-        #cityTable th:not(.frozen-col), #cityTable td:not(.frozen-col) {{ width: 8ch; min-width: 8ch; max-width: 8ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }}
+        /* Below 640px the table becomes a stack of license cards: the
+           כתובת cell (address + mobile-facts + מידע/הפצה/פעולה sections,
+           see maps_link()) is the only visible cell per row - everything
+           else is already duplicated into it, so the other columns (and
+           the header row, no longer meaningful for a card list) hide. */
+        #cityTable, #cityTable tbody {{ display: block; width: 100%; }}
+        #cityTable thead {{ display: none; }}
+        #cityTable tr {{
+            display: block; border: 1px solid var(--border); border-radius: 12px;
+            margin-bottom: 14px; overflow: hidden; background: var(--card);
+        }}
+        #cityTable td:not(.frozen-col-2) {{ display: none; }}
+        .frozen-col-1 {{ display: none; }}
+        .frozen-col-2 {{
+            position: static; right: auto; width: auto; min-width: 0; max-width: none;
+            box-shadow: none; padding: 12px 14px;
+        }}
     }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
@@ -1275,6 +1311,34 @@ def build_open_objections_report(latest_date, df):
         transform: scale(1.35);
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         position: relative; z-index: 10;
+    }}
+    /* Mobile card content (see maps_link()): the address is its own line,
+       then license number/גוש-חלקה/סיבת כריתה/עצים/ימים are duplicated
+       here from their own columns (hidden on mobile - can't reorder table
+       cells across columns with pure CSS), then the same 3 labeled
+       מידע/הפצה/פעולה icon groups as above - collapsed to plain compact
+       lines on desktop, expanded to full colored bands on mobile. */
+    .addr-line {{ font-weight: 700; color: var(--forest-dark); }}
+    .mobile-facts {{ display: none; }}
+    .icon-section-tag {{ display: none; }}
+    @media (max-width: 640px) {{
+        .addr-line {{ font-size: 14px; font-weight: 500; color: var(--ink-soft); }}
+        .mobile-facts {{
+            display: flex; flex-wrap: wrap; gap: 3px 16px; margin: 8px 0; font-size: 13px;
+        }}
+        .fact-label {{ color: var(--ink-soft); font-size: 11.5px; margin-inline-end: 3px; }}
+        .icon-section-tag {{
+            display: inline-block; font-weight: 700; font-size: 12px; padding: 3px 10px;
+            border-radius: 999px; background: rgba(255,255,255,0.7); margin-inline-end: 8px;
+        }}
+        .icon-section {{
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px; margin: 0 -14px;
+        }}
+        .icon-section:first-of-type {{ margin-top: 8px; }}
+        .icon-section-info {{ background: #eaf2fe; }}
+        .icon-section-spread {{ background: #e6f7ee; }}
+        .icon-section-action {{ background: #fff2dc; }}
     }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
@@ -1335,6 +1399,7 @@ def build_open_objections_report(latest_date, df):
                 <option value="">כל היישובים</option>
                 {city_options}
             </select>
+            <button type="button" class="clear-btn" title="נקה סינון" onclick="clearCityFilter()">✕ נקה</button>
             <span id="cityCount"></span>
             <div class="toolbar-actions">
                 <button class="export-btn" onclick="downloadCSV('cityTable', 'open_for_objection_{latest_date}.csv')">הורדה כ-CSV</button>
@@ -1449,6 +1514,12 @@ function filterCities() {{
     document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} רישיונות`;
 }}
 filterCities();
+
+function clearCityFilter() {{
+    document.getElementById('citySearch').value = '';
+    document.getElementById('cityFilter').value = '';
+    filterCities();
+}}
 
 if (location.hash.startsWith('#license-')) {{
     const row = document.querySelector(location.hash);

@@ -24,6 +24,27 @@ EMAIL_STYLE = """
     .status-removed { color: #e05353; font-weight: bold; }
     .footer { margin-top: 30px; font-size: 12px; color: #5b6f56; border-top: 1px solid #dfe9d8; padding-top: 10px; }
     a { color: #2ba8e0; }
+    /* License card: header (address + license number + key facts), then 3
+       grouped sections - מידע (facts links), הפצה (share/WhatsApp) and
+       פעולה (AI objection-help) - same idea as the site's icon dashboard. */
+    .cards { display: block; margin-top: 15px; }
+    .lic-card { border: 1px solid #dfe9d8; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+    .lic-header { padding: 12px 14px; background: #fff; border-bottom: 2px solid #dfe9d8; }
+    .lic-header .addr { font-size: 16px; font-weight: 700; color: #1b5e34; }
+    .lic-header .sub { font-size: 12.5px; color: #5b6f56; margin-top: 2px; }
+    .header-facts { margin-top: 8px; font-size: 13px; }
+    .header-facts span { display: inline-block; margin-inline-end: 16px; margin-bottom: 4px; }
+    .field-label { color: #5b6f56; font-size: 12px; margin-inline-end: 4px; }
+    .field-value { font-weight: 600; }
+    .section { padding: 10px 14px; font-size: 14px; border-bottom: 1px solid #dfe9d8; }
+    .section:last-child { border-bottom: none; }
+    .tag { display: inline-block; font-weight: 700; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,0.7); margin-bottom: 4px; }
+    .fields { display: block; }
+    .field-row { display: block; padding: 2px 0; }
+    .field-row a { text-decoration: none; }
+    .section-info { background-color: #eaf2fe; }
+    .section-spread { background-color: #e6f7ee; }
+    .section-action { background-color: #fff2dc; }
 """
 
 
