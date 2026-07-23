@@ -1048,7 +1048,7 @@ def build_open_objections_report(latest_date, df):
         if days < 0:
             return "עבר המועד"
         if days == 0:
-            return "היום האחרון"
+            return "היום<br>האחרון"
         return f"{days:,}"
 
     def iso_or_sentinel(dt):
@@ -1109,18 +1109,23 @@ def build_open_objections_report(latest_date, df):
             f'onclick="return openObjectionSearch(this)">{esc(row.reason)}</a>'
         )
 
-    def deadline_bg(days_left):
+    def deadline_bg(days_left, trees_to_cut):
         if pd.isna(days_left):
             return None
         days_left = max(0, int(days_left))
         max_days = 30
         t = min(days_left, max_days) / max_days
-        pink = (255, 118, 148)
+        pink = (255, 210, 220)
         white = (255, 255, 255)
-        r = round(pink[0] + (white[0] - pink[0]) * t)
-        g = round(pink[1] + (white[1] - pink[1]) * t)
-        b = round(pink[2] + (white[2] - pink[2]) * t)
-        return f"rgb({r},{g},{b})"
+        r = pink[0] + (white[0] - pink[0]) * t
+        g = pink[1] + (white[1] - pink[1]) * t
+        b = pink[2] + (white[2] - pink[2]) * t
+        if pd.notna(trees_to_cut) and trees_to_cut > 3:
+            extra = 0.15
+            r += (pink[0] - r) * extra
+            g += (pink[1] - g) * extra
+            b += (pink[2] - b) * extra
+        return f"rgb({round(r)},{round(g)},{round(b)})"
 
     def share_link(license_id):
         return (
@@ -1129,14 +1134,14 @@ def build_open_objections_report(latest_date, df):
         )
 
     def build_row(license_id, row):
-        bg = deadline_bg(row.days_left)
+        bg = deadline_bg(row.days_left, row.trees_to_cut)
         row_style = f' style="background-color:{bg}"' if bg else ""
         cell_style = f' style="background-color:{bg}"' if bg else ""
         return (
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
             f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row.street, row.city, row.govmap_url)}</td>'
-            f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>"
+            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>'
             f"<td>{reason_search_link(license_id, row)}</td>"
             f"<td>{esc(row.species)}</td>"
             f"<td>{int(row.trees_to_cut):,}</td>"
@@ -1176,10 +1181,11 @@ def build_open_objections_report(latest_date, df):
        through the rest of this wide table horizontally. */
     .frozen-col {{ position: sticky; background-color: var(--card); }}
     .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
-    .frozen-col-2 {{ right: 100px; width: 220px; min-width: 220px; max-width: 220px; white-space: normal; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
+    .frozen-col-2 {{ right: 100px; width: 15ch; min-width: 15ch; max-width: 15ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
+    .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
@@ -1250,13 +1256,13 @@ def build_open_objections_report(latest_date, df):
                 <tr>
                     <th data-col="0" class="frozen-col frozen-col-1" onclick="sortCities(0, 'string')">ישוב</th>
                     <th data-col="1" class="frozen-col frozen-col-2" onclick="sortCities(1, 'string')">כתובת</th>
-                    <th data-col="2" onclick="sortCities(2, 'string')">גוש/חלקה</th>
+                    <th data-col="2" class="gush-helka-col" onclick="sortCities(2, 'string')">גוש/<br>חלקה</th>
                     <th data-col="3" onclick="sortCities(3, 'string')">סיבת בקשה</th>
                     <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
-                    <th data-col="5" onclick="sortCities(5, 'number')">עצים לכריתה</th>
+                    <th data-col="5" onclick="sortCities(5, 'number')">עצים<br>לכריתה</th>
                     <th data-col="6" onclick="sortCities(6, 'string')">מבקש</th>
                     <th data-col="7" onclick="sortCities(7, 'string')">מועד<br>אחרון<br>להשגה</th>
-                    <th data-col="8" class="sort-asc" onclick="sortCities(8, 'number')">ימים שנותרו</th>
+                    <th data-col="8" class="sort-asc" onclick="sortCities(8, 'number')">ימים<br>שנותרו</th>
                     <th data-col="9" onclick="sortCities(9, 'number')">מספר רישיון</th>
                 </tr>
             </thead>
