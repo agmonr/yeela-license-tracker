@@ -1070,10 +1070,11 @@ def build_open_objections_report(latest_date, df):
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
         icons += plan_icon_link(row.plan_url, row.plan_number, row.reason)
-        share_icons = f'{whatsapp_share_link(license_id)} {share_link(license_id)}'
+        share_icons = f'{whatsapp_share_link(license_id, row)} {share_link(license_id)}'
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
+        addr_break = '<br class="addr-break">' if street else "<br>"
         return (
-            f'{esc(display_address)}{city_span}<br>{icons}'
+            f'{esc(display_address)}{city_span}{addr_break}{icons}'
             f'<br>{share_icons}<br>{ai_icon_link(license_id, row)}'
         )
 
@@ -1133,10 +1134,29 @@ def build_open_objections_report(latest_date, df):
             f'onclick="return copyShareLink({int(license_id)})">🔗</a>'
         )
 
-    def whatsapp_share_link(license_id):
+    def whatsapp_lines(license_id, row):
+        street = str(row.street).strip() if pd.notna(row.street) else ""
+        lines = [f"רישיון כריתה מספר {int(license_id)}", f"ישוב: {row.city}"]
+        if street:
+            lines.append(f"כתובת: {street}")
+        if pd.notna(row.gush) and pd.notna(row.helka):
+            lines.append(f"גוש/חלקה: {row.gush}/{row.helka}")
+        if row.reason:
+            lines.append(f"סיבת בקשה: {row.reason}")
+        if row.species:
+            lines.append(f"מיני עצים: {row.species}")
+        lines.append(f"עצים לכריתה: {int(row.trees_to_cut)}")
+        if row.applicant:
+            lines.append(f"מבקש: {row.applicant}")
+        if row.deadline:
+            lines.append(f"מועד אחרון להשגה: {row.deadline}")
+        return lines
+
+    def whatsapp_share_link(license_id, row):
+        lines_json = html.escape(json.dumps(whatsapp_lines(license_id, row), ensure_ascii=False), quote=True)
         return (
-            f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" '
-            f'onclick="return shareToWhatsapp({int(license_id)})">💬</a>'
+            f'<a href="#" class="share-icon" title="שיתוף בוואטסאפ" data-wa-lines="{lines_json}" '
+            f'onclick="return shareToWhatsapp(this, {int(license_id)})">💬</a>'
         )
 
     def build_row(license_id, row):
@@ -1191,11 +1211,13 @@ def build_open_objections_report(latest_date, df):
     .city-inline {{ display: none; }}
     @media (min-width: 900px) {{
         .table-scroll {{ max-height: 85vh; }}
+        .table-panel {{ position: sticky; top: 0; z-index: 25; background-color: var(--card); }}
     }}
     @media (max-width: 640px) {{
         .frozen-col-1 {{ display: none; }}
         .frozen-col-2 {{ right: 0; width: 10ch; min-width: 10ch; max-width: 10ch; }}
         .city-inline {{ display: block; }}
+        .addr-break {{ display: none; }}
     }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
@@ -1257,10 +1279,10 @@ def build_open_objections_report(latest_date, df):
         <div class="card"><div class="card-val">{n_trees:,}</div><div class="card-lbl">עצים בסכנת כריתה</div></div>
     </div>
 
-    <div class="panel">
+    <div class="panel table-panel">
         <div class="toolbar">
             <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
-            <select id="cityFilter" onchange="filterCities()">
+            <select id="cityFilter" onchange="document.getElementById('citySearch').value = this.value; filterCities();">
                 <option value="">כל היישובים</option>
                 {city_options}
             </select>
@@ -1313,9 +1335,11 @@ function copyShareLink(id) {{
     return false;
 }}
 
-function shareToWhatsapp(id) {{
+function shareToWhatsapp(link, id) {{
     const url = window.location.href.split('#')[0] + '#license-' + id;
-    window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank', 'noopener');
+    const lines = JSON.parse(link.dataset.waLines);
+    lines.push('קישור: ' + url);
+    window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\\n')), '_blank', 'noopener');
     return false;
 }}
 
@@ -1366,13 +1390,10 @@ function sortCities(col, type) {{
 
 function filterCities() {{
     const q = document.getElementById('citySearch').value.trim();
-    const cityFilter = document.getElementById('cityFilter').value;
     const rows = document.querySelectorAll('#cityBody tr');
     let shown = 0;
     rows.forEach(r => {{
-        const matchesText = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
-        const matchesCity = !cityFilter || r.children[0].textContent.trim() === cityFilter;
-        const match = matchesText && matchesCity;
+        const match = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
         r.style.display = match ? '' : 'none';
         if (match) shown++;
     }});
