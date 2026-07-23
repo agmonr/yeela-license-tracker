@@ -1106,24 +1106,36 @@ def build_open_objections_report(latest_date, df):
         )
 
     def deadline_bg(days_left, trees_to_cut):
-        if pd.isna(days_left):
+        has_deadline = pd.notna(days_left)
+        many_trees = pd.notna(trees_to_cut) and trees_to_cut > 3
+        if not has_deadline and not many_trees:
             return None
-        days_left = max(0, int(days_left))
-        max_days = 30
-        t = min(days_left, max_days) / max_days
-        grey = (225, 225, 225)
-        white = (255, 255, 255)
-        r = grey[0] + (white[0] - grey[0]) * t
-        g = grey[1] + (white[1] - grey[1]) * t
-        b = grey[2] + (white[2] - grey[2]) * t
-        if pd.notna(trees_to_cut) and trees_to_cut > 0:
+        if has_deadline:
+            days_left = max(0, int(days_left))
+            max_days = 30
+            t = min(days_left, max_days) / max_days
+            grey = (225, 225, 225)
+            white = (255, 255, 255)
+            r = grey[0] + (white[0] - grey[0]) * t
+            g = grey[1] + (white[1] - grey[1]) * t
+            b = grey[2] + (white[2] - grey[2]) * t
+        else:
+            r, g, b = 255, 255, 255
+        if many_trees:
             max_trees = 20
-            max_extra = 0.6
-            extra = min(trees_to_cut, max_trees) / max_trees * max_extra
-            r += (grey[0] - r) * extra
-            g += (grey[1] - g) * extra
-            b += (grey[2] - b) * extra
+            brown = (181, 136, 99)
+            extra = min(trees_to_cut - 3, max_trees - 3) / (max_trees - 3) * 0.6
+            r += (brown[0] - r) * extra
+            g += (brown[1] - g) * extra
+            b += (brown[2] - b) * extra
         return f"rgb({round(r)},{round(g)},{round(b)})"
+
+    def trees_font_scale(trees_to_cut):
+        if pd.isna(trees_to_cut) or trees_to_cut <= 3:
+            return None
+        max_trees = 20
+        t = min(trees_to_cut - 3, max_trees - 3) / (max_trees - 3)
+        return round(1 + t, 2)
 
     def share_link(license_id):
         return (
@@ -1158,20 +1170,27 @@ def build_open_objections_report(latest_date, df):
 
     def build_row(license_id, row):
         bg = deadline_bg(row.days_left, row.trees_to_cut)
-        row_style = f' style="background-color:{bg}"' if bg else ""
-        cell_style = f' style="background-color:{bg}"' if bg else ""
+        font_scale = trees_font_scale(row.trees_to_cut)
+        style_parts = []
+        if bg:
+            style_parts.append(f"background-color:{bg}")
+        if font_scale:
+            style_parts.append(f"font-size:{font_scale}em")
+        row_style = f' style="{";".join(style_parts)}"' if style_parts else ""
+        cell_style = row_style
+        font_style = f' style="font-size:{font_scale}em"' if font_scale else ""
         return (
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
             f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row, license_id)}</td>'
-            f"<td>{int(row.trees_to_cut):,}</td>"
-            f"<td>{format_days_left(row.days_left)}</td>"
-            f"<td>{esc(row.species)}</td>"
-            f"<td>{esc(row.reason) if row.reason else '—'}</td>"
-            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka)}</td>'
-            f"<td>{int(license_id):,}</td>"
-            f"<td>{esc(row.applicant)}</td>"
-            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td></tr>"
+            f'<td class="trees-col"{font_style}>{int(row.trees_to_cut):,}</td>'
+            f"<td{font_style}>{format_days_left(row.days_left)}</td>"
+            f"<td{font_style}>{esc(row.species)}</td>"
+            f"<td{font_style}>{esc(row.reason) if row.reason else '—'}</td>"
+            f'<td class="gush-helka-col"{font_style}>{format_gush_helka(row.gush, row.helka)}</td>'
+            f"<td{font_style}>{int(license_id):,}</td>"
+            f"<td{font_style}>{esc(row.applicant)}</td>"
+            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\"{font_style}>{esc(row.deadline)}</td></tr>"
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
@@ -1215,12 +1234,14 @@ def build_open_objections_report(latest_date, df):
         .frozen-col-2 {{ right: 0; width: 10ch; min-width: 10ch; max-width: 10ch; }}
         .city-inline {{ display: block; }}
         .addr-break {{ display: none; }}
+        #cityTable th:not(.frozen-col), #cityTable td:not(.frozen-col) {{ width: 8ch; min-width: 8ch; max-width: 8ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }}
     }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
     .page-created {{ color: var(--border); font-size: 10px; }}
     .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }}
+    .trees-col {{ text-align: center; }}
     #cityTable td {{ border-bottom-color: #aaa; }}
     #cityTable th {{ text-align: center; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
@@ -1295,7 +1316,7 @@ def build_open_objections_report(latest_date, df):
                 <tr>
                     <th data-col="0" class="frozen-col frozen-col-1" onclick="sortCities(0, 'string')">ישוב</th>
                     <th data-col="1" class="frozen-col frozen-col-2" onclick="sortCities(1, 'string')">כתובת</th>
-                    <th data-col="2" onclick="sortCities(2, 'number')">עצים<br>לכריתה</th>
+                    <th data-col="2" class="trees-col" onclick="sortCities(2, 'number')">עצים<br>לכריתה</th>
                     <th data-col="3" class="sort-asc" onclick="sortCities(3, 'number')">ימים<br>שנותרו</th>
                     <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
                     <th data-col="5" onclick="sortCities(5, 'string')">סיבת בקשה</th>
