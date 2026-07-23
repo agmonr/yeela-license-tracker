@@ -26,6 +26,30 @@ EMAIL_STYLE = """
 """
 
 
+def render_pdf(html_body, output_path):
+    """
+    Renders an HTML document to a narrow A4 PDF via the same headless
+    Chromium Playwright already installs for scraping (fetch_data.py) -
+    avoids adding a new PDF-rendering dependency. Content (see
+    notify_changes.py's build_pdf_cards_document) is a single column of
+    stacked cards, so a standard portrait page is enough - no custom wide
+    page or print-only shrink rules needed.
+    """
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+        page.set_content(html_body, wait_until="networkidle")
+        page.pdf(
+            path=str(output_path),
+            format="A4",
+            print_background=True,
+            margin={"top": "10mm", "bottom": "10mm", "left": "10mm", "right": "10mm"},
+        )
+        browser.close()
+
+
 def send_html_mail(to_addrs, subject, html_body, attachments=None):
     """
     Sends an HTML email via sendmail. GNU Mailutils' `mail -a` refuses to

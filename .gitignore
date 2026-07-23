@@ -17,6 +17,7 @@ temp_full.*
 diff_*.csv
 weekly_diff_*.csv
 last_mail_*.html
+last_mail_*.pdf
 last_weekly_report.html
 temp_mail_*.html
 temp_weekly_*.html

@@ -1056,8 +1056,9 @@ def build_open_objections_report(latest_date, df):
 
     def maps_link(street, city, govmap_url):
         street = str(street).strip() if pd.notna(street) else ""
-        address = f"{street}, {city}" if street else city
-        query = quote_plus(f"{address}, ישראל")
+        display_address = street if street else city
+        full_address = f"{street}, {city}" if street else city
+        query = quote_plus(f"{full_address}, ישראל")
         google_url = f"https://www.google.com/maps/search/?api=1&query={query}"
         icons = (
             f'<a href="{google_url}" target="_blank" rel="noopener" '
@@ -1068,7 +1069,7 @@ def build_open_objections_report(latest_date, df):
                 f' <a href="{esc(govmap_url)}" target="_blank" rel="noopener" '
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
-        return f'{esc(address)} {icons}'
+        return f'{esc(display_address)}<br>{icons}'
 
     config = configparser.ConfigParser()
     config.read(CONFIG_PATH, encoding="utf-8")
@@ -1108,19 +1109,44 @@ def build_open_objections_report(latest_date, df):
             f'onclick="return openObjectionSearch(this)">{esc(row.reason)}</a>'
         )
 
-    rows = "".join(
-        f'<tr><td class="frozen-col frozen-col-1">{esc(row.city)}</td>'
-        f'<td class="frozen-col frozen-col-2">{maps_link(row.street, row.city, row.govmap_url)}</td>'
-        f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>"
-        f"<td>{reason_search_link(license_id, row)}</td>"
-        f"<td>{esc(row.species)}</td>"
-        f"<td>{int(row.trees_to_cut):,}</td>"
-        f"<td>{esc(row.applicant)}</td>"
-        f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
-        f"<td>{format_days_left(row.days_left)}</td>"
-        f"<td>{objection_help_link(license_id, row)}</td></tr>"
-        for license_id, row in licenses.iterrows()
-    )
+    def deadline_bg(days_left):
+        if pd.isna(days_left):
+            return None
+        days_left = max(0, int(days_left))
+        max_days = 30
+        t = min(days_left, max_days) / max_days
+        pink = (255, 118, 148)
+        white = (255, 255, 255)
+        r = round(pink[0] + (white[0] - pink[0]) * t)
+        g = round(pink[1] + (white[1] - pink[1]) * t)
+        b = round(pink[2] + (white[2] - pink[2]) * t)
+        return f"rgb({r},{g},{b})"
+
+    def share_link(license_id):
+        return (
+            f'<a href="#" class="share-icon" title="העתקת קישור לרישיון זה" '
+            f'onclick="return copyShareLink({int(license_id)})">🔗</a>'
+        )
+
+    def build_row(license_id, row):
+        bg = deadline_bg(row.days_left)
+        row_style = f' style="background-color:{bg}"' if bg else ""
+        cell_style = f' style="background-color:{bg}"' if bg else ""
+        return (
+            f'<tr id="license-{int(license_id)}"{row_style}>'
+            f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
+            f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row.street, row.city, row.govmap_url)}</td>'
+            f"<td>{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>"
+            f"<td>{reason_search_link(license_id, row)}</td>"
+            f"<td>{esc(row.species)}</td>"
+            f"<td>{int(row.trees_to_cut):,}</td>"
+            f"<td>{esc(row.applicant)}</td>"
+            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
+            f"<td>{format_days_left(row.days_left)}</td>"
+            f"<td>{objection_help_link(license_id, row)} {share_link(license_id)}</td></tr>"
+        )
+
+    rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
 
     city_options = "".join(
         f'<option value="{esc(city)}">{esc(city)}</option>'
@@ -1154,6 +1180,11 @@ def build_open_objections_report(latest_date, df):
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
+    .share-icon {{ text-decoration: none; cursor: pointer; }}
+    .collapsible summary {{ cursor: pointer; }}
+    .collapsible summary h2 {{ display: inline; }}
+    tr.link-copied {{ background-color: #fff3cd; transition: background-color 0.3s; }}
+    tr.link-copied .frozen-col {{ background-color: #fff3cd; }}
     @media print {{
         .toolbar {{ display: none !important; }}
         thead th {{ position: static; box-shadow: none; }}
@@ -1173,14 +1204,18 @@ def build_open_objections_report(latest_date, df):
     </header>
 
     <div class="panel explain">
-        <h2>מה מציג הדוח</h2>
-        <p>הדוח הזה מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
-        <p>לתשומת לב: הנתונים הגולמיים של מערכת יעל"ה אינם כוללים שדה שמציין אם כבר הוגשה השגה על רישיון מסוים. הסטטוס היחיד הרלוונטי הוא סטטוס הרישיון עצמו - וכל הרישיונות בדוח זה נמצאים בסטטוס "{OPEN_STATUS}" בדיוק משום שטרם הוגשה עליהם השגה שהמערכת כבר עיבדה (ברגע שהשגה מתקבלת לטיפול, הרישיון עובר לסטטוס "בתהליך בחינת השגות שהוגשו" ויוצא מהדוח הזה). כלומר, מבחינת הנתונים הרשמיים - כל רישיון המופיע כאן עדיין ללא השגה שטופלה. אם השגה כבר הוגשה על ידי מישהו אך טרם עובדה במערכת, אין כרגע דרך לדעת זאת מתוך הנתונים הגלויים לציבור.</p>
+        <details class="collapsible">
+            <summary><h2>מה מציג הדוח</h2></summary>
+            <p>הדוח הזה מציג כל רישיון שנמצא כרגע בסטטוס "{OPEN_STATUS}", כלומר עדיין ניתן להגיש עליו השגה. המיון המחדל הוא לפי מספר הימים שנותרו עד למועד האחרון להגשת השגה, מהקרוב ביותר לרחוק ביותר, כך שהיישובים והעצים הדחופים ביותר מופיעים ראשונים.</p>
+            <p>לתשומת לב: הנתונים הגולמיים של מערכת יעל"ה אינם כוללים שדה שמציין אם כבר הוגשה השגה על רישיון מסוים. הסטטוס היחיד הרלוונטי הוא סטטוס הרישיון עצמו - וכל הרישיונות בדוח זה נמצאים בסטטוס "{OPEN_STATUS}" בדיוק משום שטרם הוגשה עליהם השגה שהמערכת כבר עיבדה (ברגע שהשגה מתקבלת לטיפול, הרישיון עובר לסטטוס "בתהליך בחינת השגות שהוגשו" ויוצא מהדוח הזה). כלומר, מבחינת הנתונים הרשמיים - כל רישיון המופיע כאן עדיין ללא השגה שטופלה. אם השגה כבר הוגשה על ידי מישהו אך טרם עובדה במערכת, אין כרגע דרך לדעת זאת מתוך הנתונים הגלויים לציבור.</p>
+        </details>
 
-        <h2>הנחיה ל-AI לעזרה בכתיבת השגה</h2>
-        <p class="note">זו ההנחיה שנשלחת יחד עם פרטי הרישיון כשלוחצים על מספר הרישיון או על סיבת הבקשה בטבלה למטה. אפשר לערוך אותה כאן - השינוי ישפיע מיד על כל הקישורים בטבלה, כל עוד הדף פתוח (העריכה לא נשמרת אחרי רענון הדף).</p>
-        <textarea id="aiPromptField" class="ai-prompt-field" dir="rtl" rows="4">{esc(default_prompt_text)}</textarea>
-        <button class="export-btn" onclick="resetAiPrompt()">איפוס לברירת מחדל</button>
+        <details class="collapsible">
+            <summary><h2>הנחיה ל-AI לעזרה בכתיבת השגה</h2></summary>
+            <p class="note">זו ההנחיה שנשלחת יחד עם פרטי הרישיון כשלוחצים על מספר הרישיון או על סיבת הבקשה בטבלה למטה. אפשר לערוך אותה כאן - השינוי ישפיע מיד על כל הקישורים בטבלה, כל עוד הדף פתוח (העריכה לא נשמרת אחרי רענון הדף).</p>
+            <textarea id="aiPromptField" class="ai-prompt-field" dir="rtl" rows="4">{esc(default_prompt_text)}</textarea>
+            <button class="export-btn" onclick="resetAiPrompt()">איפוס לברירת מחדל</button>
+        </details>
     </div>
 
     <div class="panel explain">
@@ -1220,7 +1255,7 @@ def build_open_objections_report(latest_date, df):
                     <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
                     <th data-col="5" onclick="sortCities(5, 'number')">עצים לכריתה</th>
                     <th data-col="6" onclick="sortCities(6, 'string')">מבקש</th>
-                    <th data-col="7" onclick="sortCities(7, 'string')">מועד אחרון להשגה</th>
+                    <th data-col="7" onclick="sortCities(7, 'string')">מועד<br>אחרון<br>להשגה</th>
                     <th data-col="8" class="sort-asc" onclick="sortCities(8, 'number')">ימים שנותרו</th>
                     <th data-col="9" onclick="sortCities(9, 'number')">מספר רישיון</th>
                 </tr>
@@ -1242,6 +1277,21 @@ const DEFAULT_AI_PROMPT = {json.dumps(default_prompt_text, ensure_ascii=False)};
 
 function resetAiPrompt() {{
     document.getElementById('aiPromptField').value = DEFAULT_AI_PROMPT;
+}}
+
+function copyShareLink(id) {{
+    const url = window.location.href.split('#')[0] + '#license-' + id;
+    navigator.clipboard.writeText(url).then(() => {{
+        highlightLicenseRow(id);
+    }});
+    return false;
+}}
+
+function highlightLicenseRow(id) {{
+    const row = document.getElementById('license-' + id);
+    if (!row) return;
+    row.classList.add('link-copied');
+    setTimeout(() => row.classList.remove('link-copied'), 1500);
 }}
 
 function openObjectionSearch(link) {{
@@ -1297,6 +1347,14 @@ function filterCities() {{
     document.getElementById('cityCount').textContent = `מציג ${{shown}} מתוך ${{rows.length}} רישיונות`;
 }}
 filterCities();
+
+if (location.hash.startsWith('#license-')) {{
+    const row = document.querySelector(location.hash);
+    if (row) {{
+        row.scrollIntoView({{behavior: 'smooth', block: 'center'}});
+        highlightLicenseRow(location.hash.slice('#license-'.length));
+    }}
+}}
 </script>
 </body>
 </html>
@@ -1361,6 +1419,7 @@ def build_index(trend):
 
 def build_ai_index(snapshots):
     lines = [
+        f"# נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}",
         f"{BASE_URL}index.html",
         f"{BASE_URL}open_for_objection.html",
         f"{BASE_URL}by_city.html",
@@ -1383,6 +1442,7 @@ def build_current_redirect(latest_date):
 </head>
 <body>
 <p>מעביר לדוח האחרון: <a href="{target}">{target}</a></p>
+<p>נוצר אוטומטית ב-{datetime.now(timezone.utc).astimezone().strftime('%d/%m/%Y %H:%M')}.</p>
 </body>
 </html>
 """

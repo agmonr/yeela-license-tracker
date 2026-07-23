@@ -1,3 +1,4 @@
+# נוצר אוטומטית ב-23/07/2026 06:55
 https://agmonr.github.io/yeela-license-tracker/statics/reports/index.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/open_for_objection.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/by_city.html
@@ -24,3 +25,5 @@ https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-18
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-19.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-20.html
 https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-21.html
+https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-22.html
+https://agmonr.github.io/yeela-license-tracker/statics/reports/report_2026-07-23.html
