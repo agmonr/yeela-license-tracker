@@ -1026,7 +1026,10 @@ def build_open_objections_report(latest_date, df):
     def format_gush_helka(gush, helka):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
-        return esc(f"{gush}/{helka}")
+        full_text = f"{gush}/{helka}"
+        if len(full_text) > 10:
+            return f'<span title="{esc(full_text)}">{esc(full_text[:10])}…</span>'
+        return esc(full_text)
 
     def format_days_left(days):
         if pd.isna(days):
@@ -1130,13 +1133,6 @@ def build_open_objections_report(latest_date, df):
             b += (brown[2] - b) * extra
         return f"rgb({round(r)},{round(g)},{round(b)})"
 
-    def trees_font_scale(trees_to_cut):
-        if pd.isna(trees_to_cut) or trees_to_cut <= 3:
-            return None
-        max_trees = 20
-        t = min(trees_to_cut - 3, max_trees - 3) / (max_trees - 3)
-        return round(1 + t, 2)
-
     def share_link(license_id):
         return (
             f'<a href="#" class="share-icon" title="העתקת קישור לרישיון זה" '
@@ -1170,27 +1166,20 @@ def build_open_objections_report(latest_date, df):
 
     def build_row(license_id, row):
         bg = deadline_bg(row.days_left, row.trees_to_cut)
-        font_scale = trees_font_scale(row.trees_to_cut)
-        style_parts = []
-        if bg:
-            style_parts.append(f"background-color:{bg}")
-        if font_scale:
-            style_parts.append(f"font-size:{font_scale}em")
-        row_style = f' style="{";".join(style_parts)}"' if style_parts else ""
+        row_style = f' style="background-color:{bg}"' if bg else ""
         cell_style = row_style
-        font_style = f' style="font-size:{font_scale}em"' if font_scale else ""
         return (
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
             f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row, license_id)}</td>'
-            f'<td class="trees-col"{font_style}>{int(row.trees_to_cut):,}</td>'
-            f"<td{font_style}>{format_days_left(row.days_left)}</td>"
-            f"<td{font_style}>{esc(row.species)}</td>"
-            f"<td{font_style}>{esc(row.reason) if row.reason else '—'}</td>"
-            f'<td class="gush-helka-col"{font_style}>{format_gush_helka(row.gush, row.helka)}</td>'
-            f"<td{font_style}>{int(license_id):,}</td>"
-            f"<td{font_style}>{esc(row.applicant)}</td>"
-            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\"{font_style}>{esc(row.deadline)}</td></tr>"
+            f'<td class="trees-col">{int(row.trees_to_cut):,}</td>'
+            f"<td>{format_days_left(row.days_left)}</td>"
+            f"<td>{esc(row.species)}</td>"
+            f"<td>{esc(row.reason) if row.reason else '—'}</td>"
+            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka)}</td>'
+            f"<td>{int(license_id):,}</td>"
+            f"<td>{esc(row.applicant)}</td>"
+            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td></tr>"
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
