@@ -1054,7 +1054,7 @@ def build_open_objections_report(latest_date, df):
     def iso_or_sentinel(dt):
         return dt.strftime("%Y-%m-%d") if pd.notna(dt) else "9999-12-31"
 
-    def maps_link(street, city, govmap_url):
+    def maps_link(street, city, govmap_url, license_id):
         street = str(street).strip() if pd.notna(street) else ""
         display_address = street if street else city
         full_address = f"{street}, {city}" if street else city
@@ -1069,6 +1069,7 @@ def build_open_objections_report(latest_date, df):
                 f' <a href="{esc(govmap_url)}" target="_blank" rel="noopener" '
                 f'class="map-icon" title="פתח ב-GovMap (תצלום אוויר)">🛰️</a>'
             )
+        icons += f' {share_link(license_id)}'
         city_span = f' <span class="city-inline">({esc(city)})</span>' if street else ""
         return f'{esc(display_address)}{city_span}<br>{icons}'
 
@@ -1121,8 +1122,10 @@ def build_open_objections_report(latest_date, df):
         r = grey[0] + (white[0] - grey[0]) * t
         g = grey[1] + (white[1] - grey[1]) * t
         b = grey[2] + (white[2] - grey[2]) * t
-        if pd.notna(trees_to_cut) and trees_to_cut > 3:
-            extra = 0.15
+        if pd.notna(trees_to_cut) and trees_to_cut > 0:
+            max_trees = 20
+            max_extra = 0.6
+            extra = min(trees_to_cut, max_trees) / max_trees * max_extra
             r += (grey[0] - r) * extra
             g += (grey[1] - g) * extra
             b += (grey[2] - b) * extra
@@ -1141,7 +1144,7 @@ def build_open_objections_report(latest_date, df):
         return (
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
-            f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row.street, row.city, row.govmap_url)}</td>'
+            f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row.street, row.city, row.govmap_url, license_id)}</td>'
             f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka, row.plan_number, row.plan_url, row.reason)}</td>'
             f"<td>{reason_search_link(license_id, row)}</td>"
             f"<td>{esc(row.species)}</td>"
@@ -1149,7 +1152,7 @@ def build_open_objections_report(latest_date, df):
             f"<td>{esc(row.applicant)}</td>"
             f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
             f"<td>{format_days_left(row.days_left)}</td>"
-            f'<td>{objection_help_link(license_id, row)}<span class="mobile-break"></span>{share_link(license_id)}</td></tr>'
+            f"<td>{objection_help_link(license_id, row)}</td></tr>"
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
@@ -1184,21 +1187,19 @@ def build_open_objections_report(latest_date, df):
     .frozen-col-1 {{ right: 0; width: 100px; min-width: 100px; max-width: 100px; }}
     .frozen-col-2 {{ right: 100px; width: 13ch; min-width: 13ch; max-width: 13ch; white-space: normal; overflow-wrap: anywhere; word-break: break-word; box-shadow: -2px 0 2px -1px var(--shadow-soft); }}
     .city-inline {{ display: none; }}
-    .mobile-break {{ display: none; }}
     @media (min-width: 900px) {{
         .table-scroll {{ max-height: 85vh; }}
     }}
     @media (max-width: 640px) {{
         .frozen-col-1 {{ display: none; }}
-        .frozen-col-2 {{ right: 0; width: 13ch; min-width: 13ch; max-width: 13ch; }}
-        .city-inline {{ display: inline; }}
-        .mobile-break {{ display: block; }}
+        .frozen-col-2 {{ right: 0; width: 10ch; min-width: 10ch; max-width: 10ch; }}
+        .city-inline {{ display: block; }}
     }}
     thead .frozen-col {{ z-index: 16; }}
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
     .page-created {{ color: var(--border); font-size: 10px; }}
-    .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; }}
+    .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
     .collapsible summary {{ cursor: pointer; }}
     .collapsible summary h2 {{ display: inline; }}
