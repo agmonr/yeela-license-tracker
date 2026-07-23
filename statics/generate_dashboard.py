@@ -1026,10 +1026,7 @@ def build_open_objections_report(latest_date, df):
     def format_gush_helka(gush, helka):
         if pd.isna(gush) or pd.isna(helka):
             return "—"
-        full_text = f"{gush}/{helka}"
-        if len(full_text) > 20:
-            return f'<span title="{esc(full_text)}">{esc(full_text[:20])}…</span>'
-        return esc(full_text)
+        return esc(f"{gush}/{helka}")
 
     def format_days_left(days):
         if pd.isna(days):
@@ -1167,14 +1164,14 @@ def build_open_objections_report(latest_date, df):
             f'<tr id="license-{int(license_id)}"{row_style}>'
             f'<td class="frozen-col frozen-col-1"{cell_style}>{esc(row.city)}</td>'
             f'<td class="frozen-col frozen-col-2"{cell_style}>{maps_link(row, license_id)}</td>'
-            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka)}</td>'
-            f"<td>{esc(row.reason) if row.reason else '—'}</td>"
-            f"<td>{esc(row.species)}</td>"
             f"<td>{int(row.trees_to_cut):,}</td>"
-            f"<td>{esc(row.applicant)}</td>"
-            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td>"
             f"<td>{format_days_left(row.days_left)}</td>"
-            f"<td>{int(license_id):,}</td></tr>"
+            f"<td>{esc(row.species)}</td>"
+            f"<td>{esc(row.reason) if row.reason else '—'}</td>"
+            f'<td class="gush-helka-col">{format_gush_helka(row.gush, row.helka)}</td>'
+            f"<td>{int(license_id):,}</td>"
+            f"<td>{esc(row.applicant)}</td>"
+            f"<td data-sort=\"{iso_or_sentinel(row.deadline_dt)}\">{esc(row.deadline)}</td></tr>"
         )
 
     rows = "".join(build_row(license_id, row) for license_id, row in licenses.iterrows())
@@ -1223,7 +1220,7 @@ def build_open_objections_report(latest_date, df):
     tbody .frozen-col {{ z-index: 5; }}
     tr:hover .frozen-col {{ background-color: #f7fbf4; }}
     .page-created {{ color: var(--border); font-size: 10px; }}
-    .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; }}
+    .gush-helka-col {{ width: 70px; min-width: 70px; max-width: 70px; text-align: center; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }}
     #cityTable td {{ border-bottom-color: #aaa; }}
     #cityTable th {{ text-align: center; }}
     .share-icon {{ text-decoration: none; cursor: pointer; }}
@@ -1293,19 +1290,19 @@ def build_open_objections_report(latest_date, df):
             </div>
         </div>
         <div class="table-scroll">
-        <table id="cityTable" data-sort-col="8" data-sort-dir="asc">
+        <table id="cityTable" data-sort-col="3" data-sort-dir="asc">
             <thead>
                 <tr>
                     <th data-col="0" class="frozen-col frozen-col-1" onclick="sortCities(0, 'string')">ישוב</th>
                     <th data-col="1" class="frozen-col frozen-col-2" onclick="sortCities(1, 'string')">כתובת</th>
-                    <th data-col="2" class="gush-helka-col" onclick="sortCities(2, 'string')">גוש/<br>חלקה</th>
-                    <th data-col="3" onclick="sortCities(3, 'string')">סיבת בקשה</th>
+                    <th data-col="2" onclick="sortCities(2, 'number')">עצים<br>לכריתה</th>
+                    <th data-col="3" class="sort-asc" onclick="sortCities(3, 'number')">ימים<br>שנותרו</th>
                     <th data-col="4" onclick="sortCities(4, 'string')">מיני עצים</th>
-                    <th data-col="5" onclick="sortCities(5, 'number')">עצים<br>לכריתה</th>
-                    <th data-col="6" onclick="sortCities(6, 'string')">מבקש</th>
-                    <th data-col="7" onclick="sortCities(7, 'string')">מועד<br>אחרון<br>להשגה</th>
-                    <th data-col="8" class="sort-asc" onclick="sortCities(8, 'number')">ימים<br>שנותרו</th>
-                    <th data-col="9" onclick="sortCities(9, 'number')">מספר רישיון</th>
+                    <th data-col="5" onclick="sortCities(5, 'string')">סיבת בקשה</th>
+                    <th data-col="6" class="gush-helka-col" onclick="sortCities(6, 'string')">גוש/<br>חלקה</th>
+                    <th data-col="7" onclick="sortCities(7, 'number')">מספר רישיון</th>
+                    <th data-col="8" onclick="sortCities(8, 'string')">מבקש</th>
+                    <th data-col="9" onclick="sortCities(9, 'string')">מועד<br>אחרון<br>להשגה</th>
                 </tr>
             </thead>
             <tbody id="cityBody">{rows}</tbody>
@@ -1393,7 +1390,7 @@ function filterCities() {{
     const rows = document.querySelectorAll('#cityBody tr');
     let shown = 0;
     rows.forEach(r => {{
-        const match = [0, 2, 3, 5].some(i => r.children[i].textContent.includes(q));
+        const match = [0, 4, 5, 8].some(i => r.children[i].textContent.includes(q));
         r.style.display = match ? '' : 'none';
         if (match) shown++;
     }});
