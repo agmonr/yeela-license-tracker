@@ -1420,7 +1420,10 @@ def build_open_objections_report(latest_date, df):
         <div class="toolbar">
             <div class="search-wrap">
                 <span class="search-label">שם העיר</span>
-                <input type="text" id="citySearch" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
+                <input type="text" id="citySearch" list="cityDatalist" autocomplete="off" placeholder="חיפוש לפי יישוב, סיבת בקשה, מין עץ או מבקש..." oninput="filterCities()">
+                <datalist id="cityDatalist">
+                    {city_options}
+                </datalist>
             </div>
             <select id="cityFilter" onchange="document.getElementById('citySearch').value = this.value; filterCities();">
                 <option value="">כל היישובים</option>
